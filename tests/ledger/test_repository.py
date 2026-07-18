@@ -43,6 +43,16 @@ def _record(
     )
 
 
+def test_open_creates_missing_parent_directories(tmp_path) -> None:
+    nested_path = tmp_path / "nested" / "subdir" / "ledger.sqlite3"
+
+    repo = LedgerRepository.open(nested_path)
+    try:
+        assert nested_path.exists()
+    finally:
+        repo.close()
+
+
 def test_schema_creates_expected_ledger_tables(tmp_path) -> None:
     repo = LedgerRepository.open(tmp_path / "ledger.sqlite3")
     try:

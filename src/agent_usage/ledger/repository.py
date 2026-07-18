@@ -6,6 +6,7 @@ import sqlite3
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 
 from agent_usage.ledger.schema import apply_schema
 from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
@@ -77,6 +78,7 @@ class LedgerRepository:
     @classmethod
     def open(cls, path: Path) -> "LedgerRepository":
         """Open (or create) the ledger database at the given path, read-write."""
+        path.parent.mkdir(parents=True, exist_ok=True)
         return cls(sqlite3.connect(path))
 
     def close(self) -> None:
@@ -127,3 +129,19 @@ class LedgerRepository:
             self._connection.execute(
                 _UPSERT_CHECKPOINT_SQL, (agent.value, occurred_at_utc.isoformat())
             )
+
+    def get_or_create_device_id(self) -> str:
+        """Return this install's opaque device identifier, creating one if unset."""
+        row = self._connection.execute(
+            "SELECT device_id FROM device_identity WHERE id = 1"
+        ).fetchone()
+        if row is not None:
+            return row["device_id"]
+
+        device_id = str(uuid4())
+        with self._connection:
+            self._connection.execute(
+                "INSERT INTO device_identity (id, device_id) VALUES (1, ?)",
+                (device_id,),
+            )
+        return device_id

@@ -14,11 +14,11 @@ from agent_usage.time_window import normalize_utc
 
 _INSERT_EVENT_SQL = """
 INSERT OR IGNORE INTO events (
-    fingerprint, agent, occurred_at,
+    fingerprint, agent, occurred_at, session_fingerprint,
     input_tokens, output_tokens, reasoning_tokens,
     observed_skill_name, observed_mcp_server_name, observed_mcp_tool_name,
     source_status, schema_version
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 _UPSERT_CHECKPOINT_SQL = """
@@ -33,6 +33,7 @@ def _record_to_row(record: NormalizedUsageRecord) -> tuple:
         record.fingerprint,
         record.agent.value,
         record.occurred_at.isoformat(),
+        record.session_fingerprint,
         tokens.input_tokens if tokens is not None else None,
         tokens.output_tokens if tokens is not None else None,
         tokens.reasoning_tokens if tokens is not None else None,
@@ -58,6 +59,7 @@ def _row_to_record(row: sqlite3.Row) -> NormalizedUsageRecord:
         agent=SupportedAgent(row["agent"]),
         occurred_at=datetime.fromisoformat(row["occurred_at"]),
         fingerprint=row["fingerprint"],
+        session_fingerprint=row["session_fingerprint"],
         tokens=tokens,
         observed_skill_name=row["observed_skill_name"],
         observed_mcp_server_name=row["observed_mcp_server_name"],

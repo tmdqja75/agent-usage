@@ -30,6 +30,10 @@ from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAge
 from agent_usage.time_window import TimeWindow
 
 
+def _session_fingerprint(session_id: str) -> str | None:
+    return make_fingerprint("claude_code", "session", session_id) if session_id else None
+
+
 def _parse_timestamp(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
@@ -126,6 +130,7 @@ def _token_record_from_assistant_event(
         agent=SupportedAgent.CLAUDE_CODE,
         occurred_at=occurred_at,
         fingerprint=make_fingerprint("claude_code", "assistant_usage", session_id, uuid),
+        session_fingerprint=_session_fingerprint(session_id),
         tokens=tokens,
         source_status=status,
     )
@@ -173,6 +178,7 @@ def _tool_observation_records_from_assistant_event(
                 fingerprint=make_fingerprint(
                     "claude_code", "tool_call", session_id, tool_use_id
                 ),
+                session_fingerprint=_session_fingerprint(session_id),
                 tokens=TokenUsage(),
                 observed_skill_name=skill_name,
                 observed_mcp_server_name=mcp_server,

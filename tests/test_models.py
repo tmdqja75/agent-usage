@@ -89,6 +89,7 @@ def test_normalized_record_keeps_only_safe_metadata_and_normalizes_utc() -> None
         "agent",
         "occurred_at",
         "fingerprint",
+        "session_fingerprint",
         "tokens",
         "observed_skill_name",
         "observed_mcp_server_name",
@@ -98,6 +99,27 @@ def test_normalized_record_keeps_only_safe_metadata_and_normalizes_utc() -> None
     }
     protected_names = {"prompt", "path", "arguments"}
     assert not protected_names & {field.name for field in fields(NormalizedUsageRecord)}
+
+
+def test_session_fingerprint_defaults_to_none_and_can_be_set() -> None:
+    without_session = NormalizedUsageRecord(
+        agent=SupportedAgent.CODEX,
+        occurred_at=datetime(2026, 7, 4, tzinfo=UTC),
+        fingerprint="marker-fingerprint",
+        tokens=None,
+        source_status=SourceStatus.SOURCE_UNAVAILABLE,
+    )
+    with_session = NormalizedUsageRecord(
+        agent=SupportedAgent.CODEX,
+        occurred_at=datetime(2026, 7, 4, tzinfo=UTC),
+        fingerprint="event-fingerprint",
+        session_fingerprint="opaque-session-hash",
+        tokens=TokenUsage(input_tokens=1),
+        source_status=SourceStatus.AVAILABLE_WITH_ACTIVITY,
+    )
+
+    assert without_session.session_fingerprint is None
+    assert with_session.session_fingerprint == "opaque-session-hash"
 
 
 @pytest.mark.parametrize("fingerprint", ["", "   "])

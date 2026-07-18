@@ -294,6 +294,58 @@ def test_fingerprint_never_contains_the_raw_session_id(tmp_path) -> None:
         assert real_session_id not in record.fingerprint
 
 
+def test_session_fingerprint_never_contains_the_raw_session_id_and_is_shared(tmp_path) -> None:
+    db_path = tmp_path / "state.db"
+    real_session_id = "super-secret-real-session-identifier"
+    build_hermes_state_db(
+        db_path,
+        sessions=[{"id": real_session_id, "source": "cli", "started_at": IN_WINDOW}],
+        session_model_usage=[
+            {
+                "session_id": real_session_id,
+                "model": "synthetic-model",
+                "input_tokens": 10,
+                "output_tokens": 5,
+                "last_seen": IN_WINDOW,
+            },
+        ],
+        messages=[
+            {
+                "id": 1,
+                "session_id": real_session_id,
+                "role": "tool",
+                "tool_name": "mcp__synthetic_server__synthetic_tool",
+                "tool_call_id": "call-1",
+                "timestamp": IN_WINDOW,
+            },
+        ],
+    )
+
+    records = hermes.collect(db_path, WINDOW)
+
+    assert len(records) == 2
+    session_fingerprints = {r.session_fingerprint for r in records}
+    assert len(session_fingerprints) == 1
+    [session_fingerprint] = session_fingerprints
+    assert session_fingerprint is not None
+    assert real_session_id not in session_fingerprint
+
+
+def test_marker_records_have_no_session_fingerprint(tmp_path) -> None:
+    missing_path = tmp_path / "does-not-exist.db"
+
+    [unavailable_record] = hermes.collect(missing_path, WINDOW)
+
+    assert unavailable_record.session_fingerprint is None
+
+    empty_db_path = tmp_path / "state.db"
+    build_hermes_state_db(empty_db_path)
+
+    [zero_activity_record] = hermes.collect(empty_db_path, WINDOW)
+
+    assert zero_activity_record.session_fingerprint is None
+
+
 def test_records_never_contain_message_content_or_tool_arguments(tmp_path) -> None:
     db_path = tmp_path / "state.db"
     sensitive_content = "sensitive-prompt-content-should-never-appear"

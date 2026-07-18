@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS events (
     fingerprint TEXT PRIMARY KEY,
     agent TEXT NOT NULL,
     occurred_at TEXT NOT NULL,
+    session_fingerprint TEXT,
     input_tokens INTEGER,
     output_tokens INTEGER,
     reasoning_tokens INTEGER,

@@ -54,12 +54,21 @@ class NormalizedUsageRecord:
 
     This record deliberately retains only opaque identifiers and observed names.
     It has no fields for prompts, source paths, command arguments, or content.
+
+    ``session_fingerprint`` is a separate opaque hash of just the source's
+    real session identifier (never the identifier itself), shared by every
+    record produced from the same session. It exists purely so aggregation
+    can count distinct sessions per agent/day without ever recovering or
+    storing the raw session ID. It's None for synthetic per-window marker
+    records (source unavailable / zero activity) that don't correspond to
+    any real session.
     """
 
     agent: SupportedAgent
     occurred_at: datetime
     fingerprint: str
     tokens: TokenUsage | None
+    session_fingerprint: str | None = None
     observed_skill_name: str | None = None
     observed_mcp_server_name: str | None = None
     observed_mcp_tool_name: str | None = None

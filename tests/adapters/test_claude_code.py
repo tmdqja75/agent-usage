@@ -250,6 +250,47 @@ def test_fingerprint_never_contains_the_raw_session_id_or_uuid(tmp_path) -> None
         assert real_uuid not in record.fingerprint
 
 
+def test_session_fingerprint_never_contains_the_raw_session_id_and_is_shared(tmp_path) -> None:
+    projects_dir = _project_dir(tmp_path)
+    real_session_id = "super-secret-real-session-identifier"
+    write_transcript(
+        projects_dir / "proj-a" / "session-1.jsonl",
+        [
+            assistant_event(
+                uuid="uuid-a1",
+                session_id=real_session_id,
+                timestamp=IN_WINDOW,
+                input_tokens=10,
+                output_tokens=5,
+                tool_use=[skill_tool_use("call-1", "synthetic-skill")],
+            ),
+        ],
+    )
+
+    records = claude_code.collect(projects_dir, WINDOW)
+
+    assert len(records) == 2
+    session_fingerprints = {r.session_fingerprint for r in records}
+    assert len(session_fingerprints) == 1
+    [session_fingerprint] = session_fingerprints
+    assert session_fingerprint is not None
+    assert real_session_id not in session_fingerprint
+
+
+def test_marker_records_have_no_session_fingerprint(tmp_path) -> None:
+    missing_dir = tmp_path / "does-not-exist"
+
+    [unavailable_record] = claude_code.collect(missing_dir, WINDOW)
+
+    assert unavailable_record.session_fingerprint is None
+
+    empty_projects_dir = _project_dir(tmp_path)
+
+    [zero_activity_record] = claude_code.collect(empty_projects_dir, WINDOW)
+
+    assert zero_activity_record.session_fingerprint is None
+
+
 def test_records_never_contain_message_content(tmp_path) -> None:
     projects_dir = _project_dir(tmp_path)
     sensitive_content = "sensitive-prompt-content-should-never-appear"

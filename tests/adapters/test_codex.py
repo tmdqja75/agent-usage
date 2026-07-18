@@ -280,6 +280,44 @@ def test_fingerprint_never_contains_the_raw_session_id(tmp_path) -> None:
         assert real_session_id not in record.fingerprint
 
 
+def test_session_fingerprint_never_contains_the_raw_session_id_and_is_shared(tmp_path) -> None:
+    sessions_dir = _sessions_dir(tmp_path)
+    real_session_id = "super-secret-real-session-identifier"
+    write_rollout(
+        sessions_dir / "2026" / "07" / "10" / "rollout-x.jsonl",
+        real_session_id,
+        [
+            token_count_event(IN_WINDOW_1, total_input=10, total_output=5),
+            function_call_event(
+                IN_WINDOW_1, name="mcp__synthetic_server__synthetic_tool", call_id="call-1"
+            ),
+        ],
+    )
+
+    records = codex.collect(sessions_dir, WINDOW)
+
+    assert len(records) == 2
+    session_fingerprints = {r.session_fingerprint for r in records}
+    assert len(session_fingerprints) == 1
+    [session_fingerprint] = session_fingerprints
+    assert session_fingerprint is not None
+    assert real_session_id not in session_fingerprint
+
+
+def test_marker_records_have_no_session_fingerprint(tmp_path) -> None:
+    missing_dir = tmp_path / "does-not-exist"
+
+    [unavailable_record] = codex.collect(missing_dir, WINDOW)
+
+    assert unavailable_record.session_fingerprint is None
+
+    empty_sessions_dir = _sessions_dir(tmp_path)
+
+    [zero_activity_record] = codex.collect(empty_sessions_dir, WINDOW)
+
+    assert zero_activity_record.session_fingerprint is None
+
+
 def test_records_never_contain_raw_tool_arguments(tmp_path) -> None:
     sessions_dir = _sessions_dir(tmp_path)
     write_rollout(

@@ -36,6 +36,10 @@ def _epoch_to_utc(value: float) -> datetime:
     return datetime.fromtimestamp(value, tz=UTC)
 
 
+def _session_fingerprint(session_id: str) -> str:
+    return make_fingerprint("hermes", "session", session_id)
+
+
 def _unavailable_record(window: TimeWindow) -> NormalizedUsageRecord:
     return NormalizedUsageRecord(
         agent=SupportedAgent.HERMES_AGENT,
@@ -106,6 +110,7 @@ def _collect_token_records(
                     row["billing_mode"],
                     row["task"],
                 ),
+                session_fingerprint=_session_fingerprint(row["session_id"]),
                 tokens=tokens,
                 source_status=status,
             )
@@ -193,6 +198,7 @@ def _collect_tool_observation_records(
                 fingerprint=make_fingerprint(
                     "hermes", "tool_call", row["session_id"], str(row["id"])
                 ),
+                session_fingerprint=_session_fingerprint(row["session_id"]),
                 tokens=TokenUsage(),
                 observed_skill_name=skill_name,
                 observed_mcp_server_name=mcp_server,

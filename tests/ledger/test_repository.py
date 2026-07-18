@@ -25,6 +25,7 @@ def _record(
     *,
     agent: SupportedAgent = SupportedAgent.CLAUDE_CODE,
     occurred_at: datetime = datetime(2026, 7, 5, 12, 0, tzinfo=UTC),
+    session_fingerprint: str | None = None,
     tokens: TokenUsage | None = TokenUsage(input_tokens=10, output_tokens=5, reasoning_tokens=1),
     source_status: SourceStatus = SourceStatus.AVAILABLE_WITH_ACTIVITY,
     observed_skill_name: str | None = None,
@@ -35,6 +36,7 @@ def _record(
         agent=agent,
         occurred_at=occurred_at,
         fingerprint=fingerprint,
+        session_fingerprint=session_fingerprint,
         tokens=tokens,
         observed_skill_name=observed_skill_name,
         observed_mcp_server_name=observed_mcp_server_name,
@@ -76,6 +78,7 @@ def test_schema_creates_expected_ledger_tables(tmp_path) -> None:
 def test_insert_and_list_round_trips_a_normalized_record(repository) -> None:
     record = _record(
         "fingerprint-one",
+        session_fingerprint="opaque-session-hash",
         observed_skill_name="safe-skill",
         observed_mcp_server_name="local-server",
         observed_mcp_tool_name="safe-tool",
@@ -86,6 +89,16 @@ def test_insert_and_list_round_trips_a_normalized_record(repository) -> None:
     assert inserted == 1
     stored = repository.list_records()
     assert stored == [record]
+    assert stored[0].session_fingerprint == "opaque-session-hash"
+
+
+def test_session_fingerprint_round_trips_as_none_when_unset(repository) -> None:
+    record = _record("fingerprint-no-session")
+
+    repository.insert_records([record])
+
+    [stored] = repository.list_records()
+    assert stored.session_fingerprint is None
 
 
 def test_insert_preserves_source_unavailable_with_none_tokens(repository) -> None:

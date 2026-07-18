@@ -36,6 +36,10 @@ from agent_usage.time_window import TimeWindow
 _TOOL_CALL_PAYLOAD_TYPES = ("function_call", "custom_tool_call")
 
 
+def _session_fingerprint(session_id: str) -> str | None:
+    return make_fingerprint("codex", "session", session_id) if session_id else None
+
+
 def _parse_timestamp(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
@@ -183,6 +187,7 @@ def _token_records_for_session(
                 fingerprint=make_fingerprint(
                     "codex", "token_count", session_id, str(event_index)
                 ),
+                session_fingerprint=_session_fingerprint(session_id),
                 tokens=tokens,
                 source_status=status,
             )
@@ -220,6 +225,7 @@ def _tool_observation_records_for_session(
                 agent=SupportedAgent.CODEX,
                 occurred_at=occurred_at,
                 fingerprint=make_fingerprint("codex", "tool_call", session_id, call_id),
+                session_fingerprint=_session_fingerprint(session_id),
                 tokens=TokenUsage(),
                 observed_mcp_server_name=mcp_server,
                 observed_mcp_tool_name=mcp_tool,

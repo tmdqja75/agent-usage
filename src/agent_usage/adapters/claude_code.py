@@ -25,23 +25,9 @@ from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 
-from agent_usage.adapters.base import make_fingerprint
+from agent_usage.adapters.base import make_fingerprint, split_mcp_tool_name
 from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
 from agent_usage.time_window import TimeWindow
-
-_MCP_TOOL_NAME_PREFIX = "mcp__"
-_MCP_NAME_DELIM = "__"
-
-
-def _split_mcp_tool_name(tool_name: str) -> tuple[str, str] | None:
-    """Split a ``mcp__<server>__<tool>`` name into (server, tool)."""
-    if not tool_name.startswith(_MCP_TOOL_NAME_PREFIX):
-        return None
-    remainder = tool_name[len(_MCP_TOOL_NAME_PREFIX) :]
-    server, delimiter, tool = remainder.partition(_MCP_NAME_DELIM)
-    if not delimiter or not server or not tool:
-        return None
-    return server, tool
 
 
 def _parse_timestamp(value: object) -> datetime | None:
@@ -175,7 +161,7 @@ def _tool_observation_records_from_assistant_event(
             if not isinstance(skill_name, str) or not skill_name:
                 continue
         else:
-            split = _split_mcp_tool_name(tool_name)
+            split = split_mcp_tool_name(tool_name)
             if split is None:
                 continue
             mcp_server, mcp_tool = split

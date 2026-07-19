@@ -29,6 +29,11 @@ jobs:
       - name: Sync locked development environment
         run: uv sync --dev --locked
 
+      - name: Configure Git identity for publish fixtures
+        run: |
+          git config --global user.name "agent-usage CI"
+          git config --global user.email "agent-usage-ci@users.noreply.github.com"
+
       - name: Run tests
         run: uv run pytest -q
 

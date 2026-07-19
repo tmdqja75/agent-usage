@@ -68,6 +68,8 @@ def test_collector_ci_runs_the_release_verification_commands() -> None:
         "actions/checkout@v4",
         "astral-sh/setup-uv@v5",
         "uv sync --dev --locked",
+        'git config --global user.name "agent-usage CI"',
+        'git config --global user.email "agent-usage-ci@users.noreply.github.com"',
         "uv run pytest -q",
         "uv run ruff check .",
         "uv build",

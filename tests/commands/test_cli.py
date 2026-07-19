@@ -128,6 +128,27 @@ def test_publish_command_reports_a_clear_error_when_gh_auth_fails(tmp_path, monk
     assert not (tmp_path / "clone").exists()
 
 
+def test_publish_command_reports_a_clear_error_when_git_operations_fail(
+    tmp_path, monkeypatch
+) -> None:
+    from agent_usage.config import AppConfig, save_config
+    from agent_usage.publish.git import GitCommandError
+
+    _patch_local_paths(monkeypatch, tmp_path)
+    save_config(tmp_path / "config.json", AppConfig(repo_target="tmdqja75/tmdqja75"))
+
+    def _fake_publish(**kwargs):
+        raise GitCommandError(("push",), 1, "! [rejected] main -> main (non-fast-forward)")
+
+    monkeypatch.setattr(cli_module.publish_command, "publish", _fake_publish)
+
+    result = runner.invoke(app, ["publish"])
+
+    assert result.exit_code != 0
+    assert "publish failed" in result.stdout.lower()
+    assert not isinstance(result.exception, GitCommandError)
+
+
 def test_publish_command_resolves_repo_url_from_config_and_reports_the_result(
     tmp_path, monkeypatch
 ) -> None:

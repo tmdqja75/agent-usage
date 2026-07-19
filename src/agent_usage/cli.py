@@ -20,6 +20,7 @@ from agent_usage.commands.collect import (
 from agent_usage.commands.publish import GhAuthError
 from agent_usage.config import config_file_path, ledger_file_path, load_config
 from agent_usage.privacy import PrivacyPolicy
+from agent_usage.publish.git import GitCommandError
 
 app = typer.Typer(
     help="Collect privacy-conscious local agent usage summaries.",
@@ -140,6 +141,9 @@ def publish(
         )
     except GhAuthError as error:
         typer.echo(f"agent-usage: gh auth check failed: {error}")
+        raise typer.Exit(code=1) from error
+    except GitCommandError as error:
+        typer.echo(f"agent-usage: publish failed: {error}")
         raise typer.Exit(code=1) from error
 
     typer.echo(

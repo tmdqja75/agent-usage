@@ -108,6 +108,9 @@ def publish_device_partition(
     on a non-fast-forward rejection (another device published first),
     re-fetches, re-rebases, and retries up to ``max_retries`` times.
     """
+    if max_retries < 1:
+        raise ValueError("max_retries must be at least 1")
+
     partition_path = _device_partition(device_id)
     if not (repo_dir / partition_path).exists():
         # Nothing was staged on disk to begin with (e.g. an empty ledger) —
@@ -120,7 +123,6 @@ def publish_device_partition(
         return PublishResult(pushed=False, commit_sha=None, attempts=0)
 
     _run("commit", "-m", commit_message, cwd=repo_dir)
-    commit_sha = _run("rev-parse", "HEAD", cwd=repo_dir).strip()
 
     attempts = 0
     while attempts < max_retries:
@@ -130,6 +132,12 @@ def publish_device_partition(
             _run("rebase", f"origin/{branch}", cwd=repo_dir)
         except GitCommandError:
             _run("rebase", "--abort", cwd=repo_dir)
+            # Un-strand the commit just made: put its content back into the
+            # index rather than leaving an unpushed commit that a later
+            # call's staged-changes check can no longer see as "changed",
+            # which would otherwise make a retry silently report nothing to
+            # publish instead of surfacing the unresolved conflict again.
+            _run("reset", "--soft", "HEAD~1", cwd=repo_dir)
             raise
 
         push = subprocess.run(
@@ -140,6 +148,10 @@ def publish_device_partition(
             check=False,
         )
         if push.returncode == 0:
+            # Re-derive the SHA post-push: a rebase rewrites the commit
+            # whenever origin actually advanced, so a SHA captured before
+            # the loop can point at a commit that was never pushed.
+            commit_sha = _run("rev-parse", "HEAD", cwd=repo_dir).strip()
             return PublishResult(pushed=True, commit_sha=commit_sha, attempts=attempts)
 
         if not any(marker in push.stderr for marker in _NON_FAST_FORWARD_MARKERS):

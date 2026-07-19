@@ -246,3 +246,74 @@ def test_publish_raises_after_exhausting_retries_on_persistent_conflict(tmp_path
         )
 
     assert push_attempts == 2
+
+
+def test_publish_returns_the_actual_pushed_commit_sha_after_a_rebase(tmp_path) -> None:
+    origin = _init_bare_origin(tmp_path)
+    clone_a = _clone(origin, tmp_path / "clone-a")
+    clone_b = _clone(origin, tmp_path / "clone-b")
+
+    _write_device_file(clone_b, "device-b", "2026-07-10.json")
+    publish_device_partition(
+        clone_b, device_id="device-b", branch="main", commit_message="chore: update device-b"
+    )
+
+    _write_device_file(clone_a, "device-a", "2026-07-10.json")
+    result = publish_device_partition(
+        clone_a, device_id="device-a", branch="main", commit_message="chore: update device-a"
+    )
+
+    remote_head = _run(clone_a, "ls-remote", "origin", "main").split()[0]
+    assert result.commit_sha == remote_head
+
+
+def test_publish_does_not_silently_report_no_op_after_a_stranded_conflict(tmp_path) -> None:
+    origin = _init_bare_origin(tmp_path)
+    clone_1 = _clone(origin, tmp_path / "clone-1")
+    clone_2 = _clone(origin, tmp_path / "clone-2")
+
+    _write_device_file(clone_1, "device-a", "2026-07-10.json", '{"v": 1}')
+    first = publish_device_partition(
+        clone_1, device_id="device-a", branch="main", commit_message="chore: update device-a v1"
+    )
+    assert first.pushed is True
+
+    _write_device_file(clone_2, "device-a", "2026-07-10.json", '{"v": 2}')
+    with pytest.raises(GitCommandError):
+        publish_device_partition(
+            clone_2, device_id="device-a", branch="main", commit_message="chore: update device-a v2"
+        )
+
+    # A retry with the same unresolved conflicting content must keep
+    # failing loudly, never silently report "nothing to publish" — that
+    # would hide a commit that was never actually pushed.
+    with pytest.raises(GitCommandError):
+        publish_device_partition(
+            clone_2,
+            device_id="device-a",
+            branch="main",
+            commit_message="chore: update device-a v2 retry",
+        )
+
+
+def test_publish_rejects_a_non_positive_max_retries_without_committing(tmp_path) -> None:
+    origin = _init_bare_origin(tmp_path)
+    repo_dir = _clone(origin, tmp_path / "clone")
+    _write_device_file(repo_dir, "device-a", "2026-07-10.json")
+    head_before = _run(repo_dir, "rev-parse", "HEAD").strip()
+
+    with pytest.raises(ValueError, match="max_retries"):
+        publish_device_partition(
+            repo_dir,
+            device_id="device-a",
+            branch="main",
+            commit_message="chore: update device-a",
+            max_retries=0,
+        )
+
+    assert _run(repo_dir, "rev-parse", "HEAD").strip() == head_before
+
+
+def test_clone_or_open_raises_git_command_error_on_failure(tmp_path) -> None:
+    with pytest.raises(GitCommandError):
+        clone_or_open("/this/path/does/not/exist.git", tmp_path / "clone", branch="main")

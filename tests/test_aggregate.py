@@ -9,6 +9,8 @@ from datetime import date, timedelta
 from agent_usage.aggregate import (
     MAX_PAYLOAD_BYTES,
     aggregate_records,
+    daily_totals,
+    monthly_totals,
     rolling_window,
     validate_and_partition,
     validate_record,
@@ -313,3 +315,74 @@ def test_a_maximally_capped_daily_record_still_passes_validation() -> None:
     issue = validate_record("device-a", payload, today=TODAY)
 
     assert issue is None
+
+
+def test_daily_totals_sums_headline_total_across_agents_and_devices() -> None:
+    payloads = [
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 10),
+            input_tokens=10,
+            output_tokens=5,
+            reasoning_tokens=0,
+        ),
+        _payload(
+            device_id="device-b",
+            day=date(2026, 7, 10),
+            input_tokens=20,
+            output_tokens=8,
+            reasoning_tokens=0,
+        ),
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 11),
+            input_tokens=1,
+            output_tokens=1,
+            reasoning_tokens=0,
+        ),
+    ]
+
+    totals = daily_totals(payloads)
+
+    assert totals["2026-07-10"] == 15 + 28
+    assert totals["2026-07-11"] == 2
+
+
+def test_daily_totals_omits_days_with_no_payload_at_all() -> None:
+    payloads = [_payload(device_id="device-a", day=date(2026, 7, 10))]
+
+    totals = daily_totals(payloads)
+
+    assert "2026-07-11" not in totals
+    assert len(totals) == 1
+
+
+def test_monthly_totals_sums_headline_total_by_calendar_month() -> None:
+    payloads = [
+        _payload(
+            device_id="device-a",
+            day=date(2026, 6, 1),
+            input_tokens=10,
+            output_tokens=0,
+            reasoning_tokens=0,
+        ),
+        _payload(
+            device_id="device-a",
+            day=date(2026, 6, 15),
+            input_tokens=5,
+            output_tokens=0,
+            reasoning_tokens=0,
+        ),
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 1),
+            input_tokens=7,
+            output_tokens=0,
+            reasoning_tokens=0,
+        ),
+    ]
+
+    totals = monthly_totals(payloads)
+
+    assert totals["2026-06"] == 15
+    assert totals["2026-07"] == 7

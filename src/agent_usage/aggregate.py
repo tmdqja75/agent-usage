@@ -250,3 +250,36 @@ def _overall_status(statuses: object) -> str:
     for status in statuses:
         best = _best_status(best, status)
     return best if best is not None else SourceStatus.SOURCE_UNAVAILABLE.value
+
+
+def daily_totals(payloads: list[dict]) -> dict[str, int]:
+    """Sum headline_total across all agents/devices for each day with data.
+
+    Only dates present in at least one payload appear in the result.
+    Callers must treat an absent date as "no data," never as zero — the
+    project's core distinction between source_unavailable and confirmed
+    zero activity applies to chart data too.
+    """
+    totals: dict[str, int] = {}
+    for payload in payloads:
+        date_str = payload["date"]
+        day_total = sum(
+            agent_data["headline_total"] for agent_data in payload.get("agents", {}).values()
+        )
+        totals[date_str] = totals.get(date_str, 0) + day_total
+    return totals
+
+
+def monthly_totals(payloads: list[dict]) -> dict[str, int]:
+    """Sum headline_total across all agents/devices for each YYYY-MM month with data.
+
+    Same no-data-means-absent contract as :func:`daily_totals`.
+    """
+    totals: dict[str, int] = {}
+    for payload in payloads:
+        month_key = payload["date"][:7]
+        day_total = sum(
+            agent_data["headline_total"] for agent_data in payload.get("agents", {}).values()
+        )
+        totals[month_key] = totals.get(month_key, 0) + day_total
+    return totals

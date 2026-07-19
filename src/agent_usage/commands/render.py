@@ -2,7 +2,7 @@
 
 Stages this device's own sanitized daily records under ``output_dir`` (in
 the same ``data/v1/devices/<device-id>/`` layout the public profile
-repository uses) and renders the managed README section plus SVG chart
+repository uses) and renders the managed README section plus Plotly PNG chart
 assets against them. Entirely local — never touches Git or the network.
 Cross-device aggregation only happens once records are actually
 published and picked up by the profile repository's own GitHub Action
@@ -21,15 +21,22 @@ from agent_usage.privacy import PrivacyPolicy
 from agent_usage.public_data import stage_daily_records
 from agent_usage.render.markdown import render_dashboard, update_readme
 
-_ROLLING_CHART_RELATIVE_PATH = Path("assets/agent-usage/rolling-14d.svg")
-_LIFETIME_CHART_RELATIVE_PATH = Path("assets/agent-usage/lifetime.svg")
+_ROLLING_CHART_RELATIVE_PATH = Path("assets/agent-usage/token-activity-14d.png")
+_TOTAL_CHART_RELATIVE_PATH = Path("assets/agent-usage/token-activity-total.png")
+_SKILLS_CHART_RELATIVE_PATH = Path("assets/agent-usage/skills.png")
+_MCP_CHART_RELATIVE_PATH = Path("assets/agent-usage/mcp.png")
 
 
-def _write_if_changed(path: Path, content: str) -> bool:
-    if path.exists() and path.read_text(encoding="utf-8") == content:
+def _write_if_changed(path: Path, content: str | bytes) -> bool:
+    if path.exists() and (
+        path.read_bytes() if isinstance(content, bytes) else path.read_text(encoding="utf-8")
+    ) == content:
         return False
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    if isinstance(content, bytes):
+        path.write_bytes(content)
+    else:
+        path.write_text(content, encoding="utf-8")
     return True
 
 
@@ -66,13 +73,17 @@ def render(
     )
 
     rolling_chart_path = output_dir / _ROLLING_CHART_RELATIVE_PATH
-    lifetime_chart_path = output_dir / _LIFETIME_CHART_RELATIVE_PATH
+    total_chart_path = output_dir / _TOTAL_CHART_RELATIVE_PATH
+    skills_chart_path = output_dir / _SKILLS_CHART_RELATIVE_PATH
+    mcp_chart_path = output_dir / _MCP_CHART_RELATIVE_PATH
     dashboard = render_dashboard(
         partition.valid_payloads,
         today=today,
         generated_at=generated_at,
         rolling_chart_path=_ROLLING_CHART_RELATIVE_PATH.as_posix(),
-        lifetime_chart_path=_LIFETIME_CHART_RELATIVE_PATH.as_posix(),
+        total_chart_path=_TOTAL_CHART_RELATIVE_PATH.as_posix(),
+        skills_chart_path=_SKILLS_CHART_RELATIVE_PATH.as_posix(),
+        mcp_chart_path=_MCP_CHART_RELATIVE_PATH.as_posix(),
     )
 
     readme_path = output_dir / "README.md"
@@ -80,7 +91,12 @@ def render(
     updated_readme = update_readme(existing_readme, dashboard["markdown"])
 
     changed = _write_if_changed(readme_path, updated_readme)
-    changed = _write_if_changed(rolling_chart_path, dashboard["rolling_svg"]) or changed
-    changed = _write_if_changed(lifetime_chart_path, dashboard["lifetime_svg"]) or changed
+    for chart_path, chart in (
+        (rolling_chart_path, dashboard["charts"]["rolling"]),
+        (total_chart_path, dashboard["charts"]["total"]),
+        (skills_chart_path, dashboard["charts"]["skills"]),
+        (mcp_chart_path, dashboard["charts"]["mcp"]),
+    ):
+        changed = _write_if_changed(chart_path, chart) or changed
 
     return RenderResult(device_id=device_id, readme_path=readme_path, changed=changed)

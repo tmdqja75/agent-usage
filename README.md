@@ -1,7 +1,133 @@
 # agent-usage
 
-`agent-usage` is a macOS-first Python CLI for collecting privacy-conscious
-summaries of local agent usage.
+`agent-usage` is a macOS-first Python CLI that builds privacy-conscious,
+local usage summaries for **Hermes Agent**, **Claude Code**, and **Codex**.
+
+It reads each supported local source in read-only mode, normalizes only the
+metadata needed for aggregation, and keeps a private SQLite ledger on the
+machine. Optional publishing writes sanitized per-device, per-UTC-day
+aggregates to a GitHub profile repository.
+
+## Requirements
+
+- macOS
+- Python 3.11 or newer
+- [uv](https://docs.astral.sh/uv/)
+
+Run the commands below from a checkout of this repository.
+
+```sh
+uv sync --dev --locked
+uv run agent-usage --help
+```
+
+## Quick start: collect and preview locally
+
+Start with the read-only diagnostic command. It creates or reuses this
+installation's opaque device ID, reports the configured profile repository (if
+any), and checks source health without adding ledger records or advancing
+collection checkpoints.
+
+```sh
+uv run agent-usage doctor
+```
+
+Preview collection before persisting anything, then run the real collection.
+The dry run observes the same inputs but does not insert records or advance
+checkpoints.
+
+```sh
+uv run agent-usage collect --dry-run
+uv run agent-usage collect
+```
+
+Render a fully local dashboard preview after collecting. This command does not
+use Git or the network; it writes a preview README, sanitized daily records,
+and Plotly-generated PNG charts to the chosen directory.
+
+```sh
+uv run agent-usage render --output-dir ./agent-usage-preview
+open ./agent-usage-preview/README.md
+```
+
+Omit `--output-dir` to write the preview alongside the private ledger.
+
+## What the collector reads
+
+The first release supports these local sources:
+
+| Agent | Local source | Accounting behavior |
+| --- | --- | --- |
+| Hermes Agent | `~/.hermes/state.db` | Reads usage rows plus observed skill and MCP calls. |
+| Claude Code | `~/.claude/projects/*/*.jsonl` | Reads assistant usage and observed Skill/MCP calls. Claude Code's reasoning counter is `0` because its source payload does not expose a separate reasoning field. |
+| Codex | `~/.codex/sessions/**/rollout-*.jsonl` | Converts cumulative `token_count` snapshots into per-session deltas, including safe handling for counter resets; reads observed MCP calls. |
+
+The collector does not infer usage when a source is missing or malformed. Each
+agent reports one of the following statuses:
+
+- `available_with_activity`
+- `available_with_zero_activity`
+- `source_unavailable`
+
+`source_unavailable` is deliberately different from zero activity and is not
+treated as a zero-token estimate.
+
+### Collection windows and repeat runs
+
+On a source's first collection, the current bootstrap window is the half-open
+UTC interval `[2026-07-04T00:00:00Z, 2026-07-18T00:00:00Z)`. This avoids an
+unbounded historical scan. Later collections resume from that source's saved
+checkpoint, and opaque fingerprints prevent duplicate normalized records from
+being counted twice.
+
+## Publish sanitized aggregates (optional)
+
+Publishing is opt-in. It requires an existing GitHub profile repository and an
+authenticated GitHub CLI session; `agent-usage` does not store or manage a
+GitHub token.
+
+```sh
+gh auth status
+uv run agent-usage init --repo OWNER/PROFILE-REPO
+uv run agent-usage collect
+uv run agent-usage render --output-dir ./agent-usage-preview
+uv run agent-usage publish
+```
+
+`init` is local-only: it records the `OWNER/REPO` target and ensures the local
+device ID exists. `publish` then stages only this installation's sanitized
+files under:
+
+```text
+data/v1/devices/<opaque-device-id>/<YYYY-MM-DD>.json
+```
+
+It clones or reuses a local checkout of the profile repository, fetches and
+rebases before pushing, retries bounded non-fast-forward races, and never
+force-pushes. Use `--branch` to select a target branch or `--clone-dir` to use
+an explicit local checkout.
+
+To generate an aggregated profile dashboard, copy
+[`templates/github-workflow.yml`](templates/github-workflow.yml) into the
+profile repository as `.github/workflows/agent-usage-dashboard.yml`. The
+workflow validates device/day records and updates the managed README section
+and chart assets only when data beneath `data/v1/**` changes. Review and enable
+that workflow only when you are ready to publish sanitized aggregates.
+
+## Optional daily macOS schedule
+
+The scheduler installs a local `launchd` job that runs `collect` and then
+`publish` at the requested local time. It is not enabled by default.
+
+```sh
+uv run agent-usage schedule install --daily-at 09:00
+uv run agent-usage schedule status
+uv run agent-usage schedule remove
+```
+
+Install a schedule only after `init`, GitHub authentication, and a manual
+publish have been verified, because scheduled runs can publish this device's
+sanitized daily aggregates.
 
 ## Privacy boundary
 
@@ -10,19 +136,18 @@ on their own machine. It does not transmit session content, raw identifiers,
 credentials, or other sensitive personal data. Opt-in publishing writes only
 sanitized device/day aggregates.
 
-The collector's public boundary, per-device publishing model, and operational
-diagnostics are documented in [docs/privacy.md](docs/privacy.md),
-[docs/multi-device.md](docs/multi-device.md), and
-[docs/troubleshooting.md](docs/troubleshooting.md).
-
 The local collector is macOS-first. Profile-dashboard rendering happens in a
 separate GitHub Actions workflow from sanitized device/day aggregates only.
 
+See [docs/privacy.md](docs/privacy.md) for the exact local/public data boundary,
+[docs/multi-device.md](docs/multi-device.md) for shared-profile workflow and
+device partition rules, and [docs/troubleshooting.md](docs/troubleshooting.md)
+for source-status, Codex-accounting, publishing, and scheduler troubleshooting.
+
 ## Development
 
-Requires Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
-
 ```sh
+uv sync --dev --locked
 uv run pytest -q
 uv run ruff check .
 uv build

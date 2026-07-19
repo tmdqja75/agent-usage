@@ -270,6 +270,36 @@ def daily_totals(payloads: list[dict]) -> dict[str, int]:
     return totals
 
 
+def daily_token_totals(payloads: list[dict]) -> dict[str, dict[str, int] | None]:
+    """Sum daily input/output/reasoning tokens from observable agent sources.
+
+    A day with public records but no available source is returned as ``None``
+    rather than as a fabricated zero.  On days where at least one source was
+    available, unavailable sources contribute nothing while the available
+    sources' token fields are aggregated across devices.
+    """
+    totals: dict[str, dict[str, int]] = {}
+    has_available_source: dict[str, bool] = {}
+    for payload in payloads:
+        date_str = payload["date"]
+        day_totals = totals.setdefault(
+            date_str, {"input": 0, "output": 0, "reasoning": 0}
+        )
+        has_available_source.setdefault(date_str, False)
+        for agent_data in payload.get("agents", {}).values():
+            if agent_data["source_status"] == SourceStatus.SOURCE_UNAVAILABLE.value:
+                continue
+            has_available_source[date_str] = True
+            day_totals["input"] += agent_data["input_tokens"]
+            day_totals["output"] += agent_data["output_tokens"]
+            day_totals["reasoning"] += agent_data["reasoning_tokens"]
+
+    return {
+        date_str: day_totals if has_available_source[date_str] else None
+        for date_str, day_totals in totals.items()
+    }
+
+
 def monthly_totals(payloads: list[dict]) -> dict[str, int]:
     """Sum headline_total across all agents/devices for each YYYY-MM month with data.
 

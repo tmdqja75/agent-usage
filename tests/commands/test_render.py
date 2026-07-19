@@ -41,9 +41,17 @@ def test_render_writes_a_readme_and_chart_assets(tmp_path) -> None:
 
     assert result.changed is True
     assert result.readme_path.exists()
-    assert "agent-usage:start" in result.readme_path.read_text(encoding="utf-8")
-    assert (output_dir / "assets" / "agent-usage" / "rolling-14d.svg").exists()
-    assert (output_dir / "assets" / "agent-usage" / "lifetime.svg").exists()
+    readme = result.readme_path.read_text(encoding="utf-8")
+    assert "agent-usage:start" in readme
+    assert "assets/agent-usage/token-activity-14d.png" in readme
+    assert "assets/agent-usage/token-activity-total.png" in readme
+    assert "assets/agent-usage/skills.png" in readme
+    assert "assets/agent-usage/mcp.png" in readme
+    assets_dir = output_dir / "assets" / "agent-usage"
+    assert (assets_dir / "token-activity-14d.png").exists()
+    assert (assets_dir / "token-activity-total.png").exists()
+    assert (assets_dir / "skills.png").exists()
+    assert (assets_dir / "mcp.png").exists()
 
 
 def test_render_stages_a_public_daily_record_for_this_device(tmp_path) -> None:
@@ -82,7 +90,7 @@ def test_render_handles_an_empty_ledger_without_crashing(tmp_path) -> None:
         ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT
     )
 
-    assert "Unavailable" in result.readme_path.read_text(encoding="utf-8")
+    assert "## Token Usage" in result.readme_path.read_text(encoding="utf-8")
 
 
 def test_render_applies_the_privacy_policy_to_skill_and_mcp_names(tmp_path) -> None:

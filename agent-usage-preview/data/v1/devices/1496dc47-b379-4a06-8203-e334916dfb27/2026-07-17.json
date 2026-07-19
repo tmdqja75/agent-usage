@@ -1,0 +1,47 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "codex": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "hermes_agent": {
+      "headline_total": 5385553,
+      "input_tokens": 4740644,
+      "output_tokens": 444436,
+      "reasoning_tokens": 200473,
+      "session_count": 50,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "a4be5dd413416a8fc2add8baa4a9f510d26d189b33c8b921fd27dab16db1990a",
+  "date": "2026-07-17",
+  "device_id": "1496dc47-b379-4a06-8203-e334916dfb27",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "brainstorming": 18,
+    "computer-use": 1,
+    "docker-compose-service-maintenance": 7,
+    "github-workflows": 3,
+    "graphify": 13,
+    "hermes-agent": 5,
+    "quality-assurance-review-workflows": 17,
+    "research-workflows": 2,
+    "software-development-lifecycle": 45,
+    "visual-design-artifacts": 4,
+    "writing-plans": 1
+  }
+}

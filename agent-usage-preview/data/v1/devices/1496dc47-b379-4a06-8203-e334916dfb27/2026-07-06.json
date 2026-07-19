@@ -1,0 +1,38 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "codex": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "hermes_agent": {
+      "headline_total": 692496,
+      "input_tokens": 648305,
+      "output_tokens": 38617,
+      "reasoning_tokens": 5574,
+      "session_count": 3,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "9e6289e5efbeaef83ab9bd0a17fc4d6236dd0ab8bf259a19bb5b6d2cffbf35f9",
+  "date": "2026-07-06",
+  "device_id": "1496dc47-b379-4a06-8203-e334916dfb27",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "docker-compose-service-maintenance": 3,
+    "software-development-lifecycle": 1
+  }
+}

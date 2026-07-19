@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from agent_usage.aggregate import (
     MAX_PAYLOAD_BYTES,
     aggregate_records,
+    daily_token_totals,
     daily_totals,
     monthly_totals,
     rolling_window,
@@ -355,6 +356,36 @@ def test_daily_totals_omits_days_with_no_payload_at_all() -> None:
 
     assert "2026-07-11" not in totals
     assert len(totals) == 1
+
+
+def test_daily_token_totals_groups_token_types_and_preserves_unknown_days() -> None:
+    payloads = [
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 10),
+            input_tokens=10,
+            output_tokens=5,
+            reasoning_tokens=1,
+        ),
+        _payload(
+            device_id="device-b",
+            day=date(2026, 7, 10),
+            agent=SupportedAgent.HERMES_AGENT,
+            input_tokens=20,
+            output_tokens=4,
+            reasoning_tokens=2,
+        ),
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 11),
+            status=SourceStatus.SOURCE_UNAVAILABLE,
+        ),
+    ]
+
+    totals = daily_token_totals(payloads)
+
+    assert totals["2026-07-10"] == {"input": 30, "output": 9, "reasoning": 3}
+    assert totals["2026-07-11"] is None
 
 
 def test_monthly_totals_sums_headline_total_by_calendar_month() -> None:

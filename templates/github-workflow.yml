@@ -62,8 +62,10 @@ jobs:
           python .agent-usage-src/scripts/build_profile_dashboard.py \
             --data-dir data/v1/devices \
             --readme README.md \
-            --rolling-chart assets/agent-usage/rolling-14d.svg \
-            --lifetime-chart assets/agent-usage/lifetime.svg
+            --rolling-chart assets/agent-usage/token-activity-14d.png \
+            --total-chart assets/agent-usage/token-activity-total.png \
+            --skills-chart assets/agent-usage/skills.png \
+            --mcp-chart assets/agent-usage/mcp.png
 
       - name: Commit and push if the dashboard changed
         run: |

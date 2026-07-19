@@ -1,1 +1,1 @@
-"""README dashboard rendering: Markdown sections and static SVG charts."""
+"""README dashboard rendering: Markdown sections and static PNG charts."""

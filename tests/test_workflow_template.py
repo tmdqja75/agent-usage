@@ -125,14 +125,19 @@ def test_build_generates_readme_and_chart_assets(tmp_path: Path) -> None:
     _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
     readme_path = tmp_path / "README.md"
     readme_path.write_text("# My Profile\n\nIntro text.\n", encoding="utf-8")
-    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
-    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
+    charts_dir = tmp_path / "assets" / "agent-usage"
+    rolling_chart = charts_dir / "token-activity-14d.png"
+    total_chart = charts_dir / "token-activity-total.png"
+    skills_chart = charts_dir / "skills.png"
+    mcp_chart = charts_dir / "mcp.png"
 
     changed = build_profile_dashboard.build(
         data_dir=data_dir,
         readme_path=readme_path,
         rolling_chart_path=rolling_chart,
-        lifetime_chart_path=lifetime_chart,
+        total_chart_path=total_chart,
+        skills_chart_path=skills_chart,
+        mcp_chart_path=mcp_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
@@ -140,8 +145,11 @@ def test_build_generates_readme_and_chart_assets(tmp_path: Path) -> None:
     assert changed is True
     assert "# My Profile" in readme_path.read_text(encoding="utf-8")
     assert "agent-usage:start" in readme_path.read_text(encoding="utf-8")
-    assert "<svg" in rolling_chart.read_text(encoding="utf-8")
-    assert "<svg" in lifetime_chart.read_text(encoding="utf-8")
+    png_signature = b"\x89PNG\r\n\x1a\n"
+    assert rolling_chart.read_bytes().startswith(png_signature)
+    assert total_chart.read_bytes().startswith(png_signature)
+    assert skills_chart.read_bytes().startswith(png_signature)
+    assert mcp_chart.read_bytes().startswith(png_signature)
 
 
 def test_build_is_idempotent_on_unchanged_input(tmp_path: Path) -> None:
@@ -255,7 +263,7 @@ def test_build_handles_missing_data_dir_without_crashing(tmp_path: Path) -> None
     )
 
     assert changed is True
-    assert "Unavailable" in readme_path.read_text(encoding="utf-8")
+    assert "## Token Usage" in readme_path.read_text(encoding="utf-8")
 
 
 def test_build_rejects_future_dated_records_without_crashing(tmp_path: Path, capsys) -> None:
@@ -307,3 +315,5 @@ def test_main_accepts_cli_arguments_and_exits_zero(tmp_path: Path, monkeypatch) 
 
     assert exit_code == 0
     assert readme_path.exists()
+    assert (tmp_path / "assets" / "agent-usage" / "skills.png").exists()
+    assert (tmp_path / "assets" / "agent-usage" / "mcp.png").exists()

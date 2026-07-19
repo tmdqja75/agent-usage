@@ -1,0 +1,43 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 850426,
+      "input_tokens": 38786,
+      "output_tokens": 811640,
+      "reasoning_tokens": 0,
+      "session_count": 3,
+      "source_status": "available_with_activity"
+    },
+    "codex": {
+      "headline_total": 227262,
+      "input_tokens": 225976,
+      "output_tokens": 1050,
+      "reasoning_tokens": 236,
+      "session_count": 2,
+      "source_status": "available_with_activity"
+    },
+    "hermes_agent": {
+      "headline_total": 1068951,
+      "input_tokens": 960389,
+      "output_tokens": 76533,
+      "reasoning_tokens": 32029,
+      "session_count": 3,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "c5bdd93b2b4db6786f9ecd3ddc18b2af1b001fefafed2d0893e14668ac992d17",
+  "date": "2026-07-19",
+  "device_id": "1496dc47-b379-4a06-8203-e334916dfb27",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "artifact-design": 1,
+    "brainstorming": 3,
+    "github-workflows": 2,
+    "software-development-lifecycle": 3,
+    "subagent-driven-development": 1,
+    "visual-design-artifacts": 1,
+    "writing-and-voice-editing": 2
+  }
+}

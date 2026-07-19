@@ -10,8 +10,6 @@ from agent_usage.render.markdown import (
     MARKER_END,
     MARKER_START,
     render_dashboard,
-    render_leaderboard_table,
-    render_source_health_table,
     update_readme,
 )
 
@@ -38,42 +36,7 @@ def _payload_with_status(status: SourceStatus, agent: SupportedAgent) -> dict:
     return build_daily_record(device_id="device-a", day=date(2026, 7, 10), records=[record])
 
 
-def test_render_source_health_table_shows_all_three_states() -> None:
-    payloads = [
-        _payload_with_status(SourceStatus.AVAILABLE_WITH_ACTIVITY, SupportedAgent.HERMES_AGENT),
-        _payload_with_status(SourceStatus.AVAILABLE_WITH_ZERO_ACTIVITY, SupportedAgent.CLAUDE_CODE),
-        _payload_with_status(SourceStatus.SOURCE_UNAVAILABLE, SupportedAgent.CODEX),
-    ]
-    from agent_usage.aggregate import aggregate_records
-
-    summary = aggregate_records(payloads)
-    table = render_source_health_table(summary)
-
-    assert "Hermes Agent" in table
-    assert "Claude Code" in table
-    assert "Codex" in table
-    assert "Active" in table
-    assert "Zero activity" in table
-    assert "Unavailable" in table
-
-
-def test_render_leaderboard_table_shows_placeholder_when_empty() -> None:
-    table = render_leaderboard_table({}, header="Skill")
-
-    assert "no" in table.lower() or "none" in table.lower()
-
-
-def test_render_leaderboard_table_caps_at_top_n_and_orders_by_count() -> None:
-    counters = {f"skill-{i}": i for i in range(20)}
-
-    table = render_leaderboard_table(counters, header="Skill", top_n=5)
-
-    assert table.count("| skill-") == 5
-    assert "skill-19" in table
-    assert "skill-0 " not in table
-
-
-def test_render_dashboard_produces_bounded_markers_and_valid_svgs() -> None:
+def test_render_dashboard_produces_only_the_requested_readme_sections_and_plotly_svgs() -> None:
     payloads = [_payload_with_status(SourceStatus.AVAILABLE_WITH_ACTIVITY, SupportedAgent.CLAUDE_CODE)]
 
     result = render_dashboard(payloads, today=TODAY, generated_at="2026-07-18")
@@ -82,8 +45,17 @@ def test_render_dashboard_produces_bounded_markers_and_valid_svgs() -> None:
     assert result["markdown"].endswith(MARKER_END)
     assert result["markdown"].count(MARKER_START) == 1
     assert result["markdown"].count(MARKER_END) == 1
-    assert "<svg" in result["rolling_svg"]
-    assert "<svg" in result["lifetime_svg"]
+    assert "## Token Usage" in result["markdown"]
+    assert "### Rolling 14 Days Activity" in result["markdown"]
+    assert "## Total Activity" in result["markdown"]
+    assert "## Skill/MCP Usage" in result["markdown"]
+    assert "### Skills" in result["markdown"]
+    assert "### MCP" in result["markdown"]
+    assert "Source Health" not in result["markdown"]
+    assert "Last updated" not in result["markdown"]
+    assert "|" not in result["markdown"]
+    for asset in result["charts"].values():
+        assert asset.startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_render_dashboard_is_deterministic_regardless_of_payload_order() -> None:
@@ -99,7 +71,7 @@ def test_render_dashboard_is_deterministic_regardless_of_payload_order() -> None
     assert first == second
 
 
-def test_render_dashboard_markdown_reflects_zero_and_unavailable_states() -> None:
+def test_render_dashboard_keeps_source_status_out_of_the_readme() -> None:
     payloads = [
         _payload_with_status(SourceStatus.AVAILABLE_WITH_ZERO_ACTIVITY, SupportedAgent.HERMES_AGENT),
         _payload_with_status(SourceStatus.SOURCE_UNAVAILABLE, SupportedAgent.CODEX),
@@ -107,8 +79,8 @@ def test_render_dashboard_markdown_reflects_zero_and_unavailable_states() -> Non
 
     result = render_dashboard(payloads, today=TODAY, generated_at="2026-07-18")
 
-    assert "Zero activity" in result["markdown"]
-    assert "Unavailable" in result["markdown"]
+    assert "Zero activity" not in result["markdown"]
+    assert "Unavailable" not in result["markdown"]
 
 
 def test_update_readme_preserves_content_outside_markers() -> None:
@@ -164,34 +136,3 @@ def test_update_readme_handles_an_empty_existing_readme() -> None:
     updated = update_readme("", dashboard)
 
     assert updated.strip() == dashboard.strip()
-
-
-def test_generated_tables_are_valid_markdown_pipe_tables() -> None:
-    import re
-
-    payloads = [_payload_with_status(SourceStatus.AVAILABLE_WITH_ACTIVITY, SupportedAgent.CLAUDE_CODE)]
-    result = render_dashboard(payloads, today=TODAY, generated_at="2026-07-18")
-
-    row_pattern = re.compile(r"^\|.+\|$")
-    separator_pattern = re.compile(r"^\|(\s*:?-+:?\s*\|)+$")
-
-    lines = result["markdown"].splitlines()
-    table_blocks: list[list[str]] = []
-    current: list[str] = []
-    for line in lines:
-        if line.startswith("|"):
-            current.append(line)
-        elif current:
-            table_blocks.append(current)
-            current = []
-    if current:
-        table_blocks.append(current)
-
-    assert table_blocks, "expected at least one Markdown table in the rendered dashboard"
-
-    for block in table_blocks:
-        assert len(block) >= 2, f"table block has no separator row: {block!r}"
-        assert row_pattern.match(block[0]), f"header row is not a valid pipe row: {block[0]!r}"
-        assert separator_pattern.match(block[1]), f"second row is not a valid separator: {block[1]!r}"
-        for row in block[2:]:
-            assert row_pattern.match(row), f"data row is not a valid pipe row: {row!r}"

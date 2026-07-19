@@ -1,0 +1,40 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "codex": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "hermes_agent": {
+      "headline_total": 1035968,
+      "input_tokens": 999667,
+      "output_tokens": 24061,
+      "reasoning_tokens": 12240,
+      "session_count": 7,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "a0fa9cdb9bb208391531d258bfa07a4c0c2f7e92977346a306999761300c3e76",
+  "date": "2026-07-13",
+  "device_id": "1496dc47-b379-4a06-8203-e334916dfb27",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "hermes-agent": 5,
+    "ouroboros:auto": 1,
+    "petdex": 1,
+    "unstuck": 1
+  }
+}

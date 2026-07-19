@@ -1,0 +1,78 @@
+# Regenerates the managed Agent Usage dashboard section in README.md
+# whenever a device pushes new sanitized daily aggregates.
+#
+# Install this file as .github/workflows/agent-usage-dashboard.yml in your
+# GitHub profile repository (e.g. <you>/<you>). It does not belong in the
+# agent-usage collector repository itself.
+#
+# Trigger scope is deliberately narrow:
+#   - only direct pushes to the default branch (no pull_request, so a fork
+#     opening a PR can never run with this workflow's contents: write token)
+#   - only when files under data/v1/** change
+# The generated README.md and assets/agent-usage/** are never listed in
+# `paths` above, so this workflow's own commits never re-trigger it.
+name: Update Agent Usage Dashboard
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "data/v1/**"
+
+permissions:
+  contents: write
+
+# Serialize runs so two devices pushing around the same time never race to
+# commit the dashboard; never cancel a run mid-way through a commit/push.
+concurrency:
+  group: agent-usage-dashboard
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Pure-Python aggregation/rendering with no macOS-specific dependency
+    # (no launchd, no local agent sources) — ubuntu-latest is the standard,
+    # cheapest choice for this job. The macOS-only constraint applies to
+    # the local collector CLI, not this profile-repo Action.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out profile repository
+        uses: actions/checkout@v4
+
+      - name: Check out agent-usage collector
+        uses: actions/checkout@v4
+        with:
+          repository: tmdqja75/agent-usage
+          # Pin this to a released tag once agent-usage starts publishing
+          # tagged releases; 'main' is a bootstrap default.
+          ref: ${{ vars.AGENT_USAGE_REF || 'main' }}
+          path: .agent-usage-src
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install agent-usage
+        run: pip install ./.agent-usage-src
+
+      - name: Validate public records and render dashboard
+        run: |
+          python .agent-usage-src/scripts/build_profile_dashboard.py \
+            --data-dir data/v1/devices \
+            --readme README.md \
+            --rolling-chart assets/agent-usage/rolling-14d.svg \
+            --lifetime-chart assets/agent-usage/lifetime.svg
+
+      - name: Commit and push if the dashboard changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md assets/agent-usage
+          if git status --porcelain | grep -q .; then
+            git commit -m "chore: update agent usage dashboard"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "agent-usage: nothing to commit"
+          fi

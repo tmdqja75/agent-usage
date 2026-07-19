@@ -13,6 +13,7 @@ runner = CliRunner()
 def _patch_local_paths(monkeypatch, tmp_path):
     monkeypatch.setattr(cli_module, "config_file_path", lambda: tmp_path / "config.json")
     monkeypatch.setattr(cli_module, "ledger_file_path", lambda: tmp_path / "ledger.sqlite3")
+    monkeypatch.setattr(cli_module, "data_dir", lambda: tmp_path / "data")
 
 
 def _patch_missing_sources(monkeypatch, tmp_path):
@@ -27,8 +28,63 @@ def test_help_lists_all_commands() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    for name in ("init", "doctor", "collect", "render", "publish"):
+    for name in ("init", "doctor", "collect", "render", "publish", "schedule"):
         assert name in result.stdout
+
+
+def test_schedule_help_lists_install_status_and_remove() -> None:
+    result = runner.invoke(app, ["schedule", "--help"])
+
+    assert result.exit_code == 0
+    for name in ("install", "status", "remove"):
+        assert name in result.stdout
+
+
+def test_schedule_install_wires_local_paths_and_reports_the_time(tmp_path, monkeypatch) -> None:
+    from agent_usage.commands.schedule import ScheduleInstallResult
+
+    _patch_local_paths(monkeypatch, tmp_path)
+    captured = {}
+
+    def _fake_install(**kwargs):
+        captured.update(kwargs)
+        return ScheduleInstallResult(plist_path=tmp_path / "schedule.plist", daily_at="09:00")
+
+    monkeypatch.setattr(cli_module.schedule_command, "install", _fake_install)
+
+    result = runner.invoke(app, ["schedule", "install", "--daily-at", "09:00"])
+
+    assert result.exit_code == 0
+    assert captured["config_path"] == tmp_path / "config.json"
+    assert captured["log_dir"] == tmp_path / "data" / "logs"
+    assert "09:00" in result.stdout
+
+
+def test_schedule_status_reports_not_installed_without_printing_a_local_path(tmp_path, monkeypatch) -> None:
+    from agent_usage.schedule.launchd import ScheduleStatus
+
+    _patch_local_paths(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        cli_module.schedule_command,
+        "status",
+        lambda: ScheduleStatus(False, tmp_path / "schedule.plist", None, False),
+    )
+
+    result = runner.invoke(app, ["schedule", "status"])
+
+    assert result.exit_code == 0
+    assert "not installed" in result.stdout.lower()
+    assert str(tmp_path) not in result.stdout
+
+
+def test_schedule_remove_reports_when_nothing_was_installed(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+    monkeypatch.setattr(cli_module.schedule_command, "remove", lambda **kwargs: False)
+
+    result = runner.invoke(app, ["schedule", "remove"])
+
+    assert result.exit_code == 0
+    assert "not installed" in result.stdout.lower()
 
 
 def test_init_command_sets_repo_target(tmp_path, monkeypatch) -> None:

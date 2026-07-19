@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,20 +13,24 @@ from agent_usage.commands import doctor as doctor_command
 from agent_usage.commands import init as init_command
 from agent_usage.commands import publish as publish_command
 from agent_usage.commands import render as render_command
+from agent_usage.commands import schedule as schedule_command
 from agent_usage.commands.collect import (
     DEFAULT_CLAUDE_CODE_PROJECTS_DIR,
     DEFAULT_CODEX_SESSIONS_DIR,
     DEFAULT_HERMES_STATE_DB,
 )
 from agent_usage.commands.publish import GhAuthError
-from agent_usage.config import config_file_path, ledger_file_path, load_config
+from agent_usage.config import config_file_path, data_dir, ledger_file_path, load_config
 from agent_usage.privacy import PrivacyPolicy
 from agent_usage.publish.git import GitCommandError
+from agent_usage.schedule.launchd import LaunchctlError
 
 app = typer.Typer(
     help="Collect privacy-conscious local agent usage summaries.",
     no_args_is_help=True,
 )
+schedule_app = typer.Typer(help="Manage the opt-in local macOS daily scheduler.", no_args_is_help=True)
+app.add_typer(schedule_app, name="schedule")
 
 
 @app.callback()
@@ -154,6 +159,52 @@ def publish(
         typer.echo(f"agent-usage: published (commit {summary.result.commit_sha})")
     else:
         typer.echo("agent-usage: nothing new to publish")
+
+
+@schedule_app.command("install")
+def schedule_install(
+    daily_at: str = typer.Option(..., "--daily-at", help="Local 24-hour time in HH:MM form."),
+) -> None:
+    """Install a daily local job that runs collect, then publish."""
+    try:
+        result = schedule_command.install(
+            config_path=config_file_path(),
+            daily_at=daily_at,
+            executable=str(Path(sys.argv[0]).resolve()),
+            log_dir=data_dir() / "logs",
+        )
+    except (LaunchctlError, ValueError) as error:
+        typer.echo(f"agent-usage: schedule install failed: {error}")
+        raise typer.Exit(code=1) from error
+
+    typer.echo(f"agent-usage: daily schedule installed for {result.daily_at}")
+
+
+@schedule_app.command("status")
+def schedule_status() -> None:
+    """Show whether the local daily job is installed and loaded."""
+    result = schedule_command.status()
+    if not result.installed:
+        typer.echo("agent-usage: daily schedule is not installed")
+        return
+
+    load_state = "loaded" if result.loaded else "not loaded"
+    typer.echo(f"agent-usage: daily schedule installed for {result.daily_at} ({load_state})")
+
+
+@schedule_app.command("remove")
+def schedule_remove() -> None:
+    """Unload and remove the local daily job."""
+    try:
+        removed = schedule_command.remove(config_path=config_file_path())
+    except LaunchctlError as error:
+        typer.echo(f"agent-usage: schedule removal failed: {error}")
+        raise typer.Exit(code=1) from error
+
+    if removed:
+        typer.echo("agent-usage: daily schedule removed")
+    else:
+        typer.echo("agent-usage: daily schedule is not installed")
 
 
 def main() -> None:

@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out collector repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync locked development environment
+        run: uv sync --dev --locked
+
+      - name: Run tests
+        run: uv run pytest -q
+
+      - name: Run linter
+        run: uv run ruff check .
+
+      - name: Build distribution
+        run: uv build
+
+      - name: Verify CLI entry point
+        run: uv run agent-usage --help

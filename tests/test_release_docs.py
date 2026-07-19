@@ -67,7 +67,7 @@ def test_collector_ci_runs_the_release_verification_commands() -> None:
     for required in (
         "actions/checkout@v7",
         "actions/setup-python@v6",
-        "astral-sh/setup-uv@v8",
+        "astral-sh/setup-uv@v8.3.2",
         "uv sync --dev --locked",
         'git config --global user.name "agent-usage CI"',
         'git config --global user.email "agent-usage-ci@users.noreply.github.com"',

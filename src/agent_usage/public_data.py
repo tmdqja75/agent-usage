@@ -157,3 +157,29 @@ def write_daily_record(path: Path, payload: dict) -> bool:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(serialized, encoding="utf-8")
     return True
+
+
+def stage_daily_records(
+    device_dir: Path,
+    *,
+    device_id: str,
+    records: list[NormalizedUsageRecord],
+    privacy_policy: PrivacyPolicy | None = None,
+) -> list[dict]:
+    """Build and write one device's public daily records, one file per day with data.
+
+    Shared by the local dashboard preview and the publish command, which
+    both need to turn a device's full ledger history into the same
+    ``<device_dir>/<YYYY-MM-DD>.json`` layout the profile repository
+    expects. Returns the written payloads in day order, so callers can
+    validate or aggregate them without re-reading from disk.
+    """
+    days = sorted({_record_day(record) for record in records})
+    payloads = []
+    for day in days:
+        payload = build_daily_record(
+            device_id=device_id, day=day, records=records, privacy_policy=privacy_policy
+        )
+        write_daily_record(device_dir / f"{day.isoformat()}.json", payload)
+        payloads.append(payload)
+    return payloads

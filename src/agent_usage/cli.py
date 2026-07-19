@@ -10,12 +10,14 @@ import typer
 from agent_usage.commands import collect as collect_command
 from agent_usage.commands import doctor as doctor_command
 from agent_usage.commands import init as init_command
+from agent_usage.commands import publish as publish_command
 from agent_usage.commands import render as render_command
 from agent_usage.commands.collect import (
     DEFAULT_CLAUDE_CODE_PROJECTS_DIR,
     DEFAULT_CODEX_SESSIONS_DIR,
     DEFAULT_HERMES_STATE_DB,
 )
+from agent_usage.commands.publish import GhAuthError
 from agent_usage.config import config_file_path, ledger_file_path, load_config
 from agent_usage.privacy import PrivacyPolicy
 
@@ -106,6 +108,48 @@ def render(
     typer.echo(
         "agent-usage: dashboard changed" if result.changed else "agent-usage: dashboard unchanged"
     )
+
+
+@app.command()
+def publish(
+    branch: str = typer.Option("main", "--branch", help="Target branch on the profile repo."),
+    clone_dir: Path | None = typer.Option(
+        None, "--clone-dir", help="Local working copy of the profile repository to use."
+    ),
+) -> None:
+    """Publish this device's own sanitized daily aggregates to the profile repository."""
+    config = load_config(config_file_path())
+    if config.repo_target is None:
+        typer.echo(
+            "agent-usage: no repo target set — run `agent-usage init --repo OWNER/REPO` first"
+        )
+        raise typer.Exit(code=1)
+
+    now = datetime.now(timezone.utc)
+    resolved_clone_dir = clone_dir or (ledger_file_path().parent / "profile-repo")
+    repo_url = f"https://github.com/{config.repo_target}.git"
+
+    try:
+        summary = publish_command.publish(
+            ledger_path=ledger_file_path(),
+            repo_url=repo_url,
+            clone_dir=resolved_clone_dir,
+            branch=branch,
+            privacy_policy=PrivacyPolicy.from_config(config),
+            today=now.date(),
+        )
+    except GhAuthError as error:
+        typer.echo(f"agent-usage: gh auth check failed: {error}")
+        raise typer.Exit(code=1) from error
+
+    typer.echo(
+        f"agent-usage: {summary.days_staged} day(s) of local history for device "
+        f"{summary.device_id}"
+    )
+    if summary.result.pushed:
+        typer.echo(f"agent-usage: published (commit {summary.result.commit_sha})")
+    else:
+        typer.echo("agent-usage: nothing new to publish")
 
 
 def main() -> None:

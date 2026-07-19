@@ -27,7 +27,7 @@ def test_help_lists_all_commands() -> None:
     result = runner.invoke(app, ["--help"])
 
     assert result.exit_code == 0
-    for name in ("init", "doctor", "collect", "render"):
+    for name in ("init", "doctor", "collect", "render", "publish"):
         assert name in result.stdout
 
 
@@ -92,3 +92,67 @@ def test_collect_then_render_produces_a_local_preview(tmp_path, monkeypatch) -> 
 
     assert render_result.exit_code == 0
     assert (output_dir / "README.md").exists()
+
+
+def test_publish_command_requires_a_repo_target(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["publish"])
+
+    assert result.exit_code != 0
+    assert "init" in result.stdout.lower()
+
+
+def test_publish_command_reports_a_clear_error_when_gh_auth_fails(tmp_path, monkeypatch) -> None:
+    from agent_usage.config import AppConfig, save_config
+
+    _patch_local_paths(monkeypatch, tmp_path)
+    save_config(tmp_path / "config.json", AppConfig(repo_target="tmdqja75/tmdqja75"))
+
+    def _fake_run(args, **kwargs):
+        class _Result:
+            returncode = 1
+            stdout = ""
+            stderr = "not logged in"
+
+        return _Result()
+
+    import agent_usage.commands.publish as publish_module
+
+    monkeypatch.setattr(publish_module.subprocess, "run", _fake_run)
+
+    result = runner.invoke(app, ["publish", "--clone-dir", str(tmp_path / "clone")])
+
+    assert result.exit_code != 0
+    assert "gh auth" in result.stdout.lower()
+    assert not (tmp_path / "clone").exists()
+
+
+def test_publish_command_resolves_repo_url_from_config_and_reports_the_result(
+    tmp_path, monkeypatch
+) -> None:
+    from agent_usage.commands.publish import PublishSummary
+    from agent_usage.config import AppConfig, save_config
+    from agent_usage.publish.git import PublishResult
+
+    _patch_local_paths(monkeypatch, tmp_path)
+    save_config(tmp_path / "config.json", AppConfig(repo_target="tmdqja75/tmdqja75"))
+
+    captured = {}
+
+    def _fake_publish(**kwargs):
+        captured.update(kwargs)
+        return PublishSummary(
+            device_id="device-x",
+            days_staged=2,
+            result=PublishResult(pushed=True, commit_sha="abc123", attempts=1),
+        )
+
+    monkeypatch.setattr(cli_module.publish_command, "publish", _fake_publish)
+
+    result = runner.invoke(app, ["publish"])
+
+    assert result.exit_code == 0
+    assert captured["repo_url"] == "https://github.com/tmdqja75/tmdqja75.git"
+    assert "device-x" in result.stdout
+    assert "abc123" in result.stdout

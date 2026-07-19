@@ -12,16 +12,14 @@ published and picked up by the profile repository's own GitHub Action
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timezone
+from datetime import date
 from pathlib import Path
 
 from agent_usage.aggregate import validate_and_partition
 from agent_usage.ledger.repository import LedgerRepository
 from agent_usage.privacy import PrivacyPolicy
-from agent_usage.public_data import build_daily_record, write_daily_record
+from agent_usage.public_data import stage_daily_records
 from agent_usage.render.markdown import render_dashboard, update_readme
-
-UTC = timezone.utc
 
 _ROLLING_CHART_RELATIVE_PATH = Path("assets/agent-usage/rolling-14d.svg")
 _LIFETIME_CHART_RELATIVE_PATH = Path("assets/agent-usage/lifetime.svg")
@@ -58,16 +56,10 @@ def render(
     finally:
         repository.close()
 
-    days = sorted({record.occurred_at.astimezone(UTC).date() for record in records})
     device_data_dir = output_dir / "data" / "v1" / "devices" / device_id
-
-    payloads = []
-    for day in days:
-        payload = build_daily_record(
-            device_id=device_id, day=day, records=records, privacy_policy=privacy_policy
-        )
-        write_daily_record(device_data_dir / f"{day.isoformat()}.json", payload)
-        payloads.append(payload)
+    payloads = stage_daily_records(
+        device_data_dir, device_id=device_id, records=records, privacy_policy=privacy_policy
+    )
 
     partition = validate_and_partition(
         [(device_id, payload) for payload in payloads], today=today

@@ -10,6 +10,7 @@ from agent_usage.privacy import PrivacyPolicy
 from agent_usage.public_data import (
     SCHEMA_VERSION,
     build_daily_record,
+    stage_daily_records,
     verify_checksum,
     write_daily_record,
 )
@@ -282,3 +283,61 @@ def test_private_data_cannot_cross_the_export_boundary() -> None:
     assert real_fingerprint not in serialized
     assert real_session_fingerprint not in serialized
     assert "internal-secret-token-tool" not in serialized
+
+
+def test_stage_daily_records_writes_one_file_per_day_with_data(tmp_path) -> None:
+    records = [
+        _record(fingerprint="fp-1", session_fingerprint="s-1"),
+        _record(
+            fingerprint="fp-2",
+            session_fingerprint="s-2",
+            occurred_at=datetime(2026, 7, 11, 12, 0, tzinfo=UTC),
+        ),
+    ]
+    device_dir = tmp_path / "device-abc"
+
+    payloads = stage_daily_records(device_dir, device_id="device-abc", records=records)
+
+    assert {p["date"] for p in payloads} == {"2026-07-10", "2026-07-11"}
+    assert (device_dir / "2026-07-10.json").exists()
+    assert (device_dir / "2026-07-11.json").exists()
+
+
+def test_stage_daily_records_is_idempotent(tmp_path) -> None:
+    records = [_record()]
+    device_dir = tmp_path / "device-abc"
+
+    stage_daily_records(device_dir, device_id="device-abc", records=records)
+    first_content = (device_dir / "2026-07-10.json").read_text(encoding="utf-8")
+    stage_daily_records(device_dir, device_id="device-abc", records=records)
+    second_content = (device_dir / "2026-07-10.json").read_text(encoding="utf-8")
+
+    assert first_content == second_content
+
+
+def test_stage_daily_records_returns_empty_list_for_no_records(tmp_path) -> None:
+    device_dir = tmp_path / "device-abc"
+
+    payloads = stage_daily_records(device_dir, device_id="device-abc", records=[])
+
+    assert payloads == []
+    assert not device_dir.exists()
+
+
+def test_stage_daily_records_applies_the_privacy_policy(tmp_path) -> None:
+    records = [
+        _record(
+            fingerprint="fp-1",
+            session_fingerprint="s-1",
+            observed_skill_name="internal-api-token-dashboard",
+            tokens=TokenUsage(),
+            source_status=SourceStatus.AVAILABLE_WITH_ZERO_ACTIVITY,
+        ),
+    ]
+    device_dir = tmp_path / "device-abc"
+
+    stage_daily_records(device_dir, device_id="device-abc", records=records)
+
+    content = (device_dir / "2026-07-10.json").read_text(encoding="utf-8")
+    assert "internal-api-token-dashboard" not in content
+    assert "(hidden)" in content

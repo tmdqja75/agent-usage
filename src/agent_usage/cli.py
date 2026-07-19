@@ -2,7 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from pathlib import Path
+
 import typer
+
+from agent_usage.commands import collect as collect_command
+from agent_usage.commands import doctor as doctor_command
+from agent_usage.commands import init as init_command
+from agent_usage.commands import render as render_command
+from agent_usage.commands.collect import (
+    DEFAULT_CLAUDE_CODE_PROJECTS_DIR,
+    DEFAULT_CODEX_SESSIONS_DIR,
+    DEFAULT_HERMES_STATE_DB,
+)
+from agent_usage.config import config_file_path, ledger_file_path, load_config
+from agent_usage.privacy import PrivacyPolicy
 
 app = typer.Typer(
     help="Collect privacy-conscious local agent usage summaries.",
@@ -13,6 +28,84 @@ app = typer.Typer(
 @app.callback()
 def command_group() -> None:
     """Commands for collecting and reviewing agent usage."""
+
+
+@app.command()
+def init(
+    repo: str = typer.Option(..., "--repo", help="GitHub profile repo in OWNER/REPO form."),
+) -> None:
+    """Set the target GitHub profile repository for this install (local only, no network)."""
+    config = init_command.init(repo, config_path=config_file_path(), ledger_path=ledger_file_path())
+    typer.echo(f"agent-usage: repo target set to {config.repo_target}")
+
+
+@app.command()
+def doctor() -> None:
+    """Show local configuration and per-agent source health."""
+    now = datetime.now(timezone.utc)
+    report = doctor_command.run_doctor(
+        config_path=config_file_path(),
+        ledger_path=ledger_file_path(),
+        hermes_db=DEFAULT_HERMES_STATE_DB,
+        claude_projects_dir=DEFAULT_CLAUDE_CODE_PROJECTS_DIR,
+        codex_sessions_dir=DEFAULT_CODEX_SESSIONS_DIR,
+        now=now,
+    )
+    typer.echo(f"device id: {report.device_id}")
+    typer.echo(f"repo target: {report.repo_target or '(not set)'}")
+    typer.echo(f"display timezone: {report.display_timezone}")
+    for source in report.sources:
+        status = source.status.value if source.status is not None else "up to date"
+        typer.echo(f"  {source.agent.value}: {status}")
+
+
+@app.command()
+def collect(
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview what would be collected without writing to the ledger."
+    ),
+) -> None:
+    """Pull new local agent usage into the private ledger."""
+    now = datetime.now(timezone.utc)
+    results = collect_command.collect_all(
+        ledger_path=ledger_file_path(),
+        hermes_db=DEFAULT_HERMES_STATE_DB,
+        claude_projects_dir=DEFAULT_CLAUDE_CODE_PROJECTS_DIR,
+        codex_sessions_dir=DEFAULT_CODEX_SESSIONS_DIR,
+        now=now,
+        dry_run=dry_run,
+    )
+    for result in results:
+        status = result.status.value if result.status is not None else "up to date"
+        typer.echo(
+            f"  {result.agent.value}: {status} "
+            f"(observed {result.records_observed}, inserted {result.records_inserted})"
+        )
+    if dry_run:
+        typer.echo("agent-usage: dry run, nothing written")
+
+
+@app.command()
+def render(
+    output_dir: Path | None = typer.Option(
+        None, "--output-dir", help="Where to write the local dashboard preview."
+    ),
+) -> None:
+    """Render a local preview of the dashboard from this device's own collected data."""
+    now = datetime.now(timezone.utc)
+    config = load_config(config_file_path())
+    resolved_output_dir = output_dir or (ledger_file_path().parent / "preview")
+    result = render_command.render(
+        ledger_path=ledger_file_path(),
+        output_dir=resolved_output_dir,
+        privacy_policy=PrivacyPolicy.from_config(config),
+        today=now.date(),
+        generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
+    )
+    typer.echo(f"agent-usage: preview written to {result.readme_path}")
+    typer.echo(
+        "agent-usage: dashboard changed" if result.changed else "agent-usage: dashboard unchanged"
+    )
 
 
 def main() -> None:

@@ -65,8 +65,9 @@ def test_collector_ci_runs_the_release_verification_commands() -> None:
     text = CI_PATH.read_text(encoding="utf-8")
 
     for required in (
-        "actions/checkout@v4",
-        "astral-sh/setup-uv@v5",
+        "actions/checkout@v7",
+        "actions/setup-python@v6",
+        "astral-sh/setup-uv@v8",
         "uv sync --dev --locked",
         'git config --global user.name "agent-usage CI"',
         'git config --global user.email "agent-usage-ci@users.noreply.github.com"',

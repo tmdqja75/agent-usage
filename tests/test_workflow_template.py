@@ -192,6 +192,31 @@ def test_build_skips_malformed_records_and_reports_diagnostics(tmp_path: Path, c
     assert "not a JSON object" in captured.err
 
 
+def test_build_skips_a_non_utf8_record_file_without_crashing(tmp_path: Path, capsys) -> None:
+    data_dir = tmp_path / "data" / "v1" / "devices"
+    _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
+    bad_dir = data_dir / "device-b"
+    bad_dir.mkdir(parents=True, exist_ok=True)
+    (bad_dir / "2026-07-10.json").write_bytes(b"\xff\xfe\x00not utf-8")
+    readme_path = tmp_path / "README.md"
+    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
+    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
+
+    changed = build_profile_dashboard.build(
+        data_dir=data_dir,
+        readme_path=readme_path,
+        rolling_chart_path=rolling_chart,
+        lifetime_chart_path=lifetime_chart,
+        today=date(2026, 7, 18),
+        generated_at="2026-07-18 00:00 UTC",
+    )
+
+    assert changed is True
+    captured = capsys.readouterr()
+    assert "device-b" in captured.err
+    assert "not a JSON object" in captured.err
+
+
 def test_build_never_leaks_device_ids_or_fingerprints_into_readme(tmp_path: Path) -> None:
     data_dir = tmp_path / "data" / "v1" / "devices"
     _write_device_record(

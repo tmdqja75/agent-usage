@@ -49,7 +49,7 @@ def _load_entries(data_dir: Path) -> list[tuple[str, object]]:
         for record_path in sorted(device_dir.glob("*.json")):
             try:
                 payload = json.loads(record_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
                 payload = None
             entries.append((device_id, payload))
     return entries

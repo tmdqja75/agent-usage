@@ -39,6 +39,13 @@ _PIE_COLORS = (
 )
 _OTHER_COLOR = "#9ca3af"
 
+_AGENT_BAR_HEIGHT = 150
+_AGENT_BAR_MARGIN = {"l": 12, "r": 24, "t": 48, "b": 12}
+_AGENT_SERIES = (
+    ("hermes_agent", "Hermes", "#f59e0b"),
+    ("claude_code", "Claude Code", "#d97757"),
+    ("codex", "Codex", "#10a37f"),
+)
 
 
 TokenPoint = tuple[str, dict[str, int] | None]
@@ -206,4 +213,53 @@ def render_usage_pie_chart(*, title: str, counters: Mapping[str, int], top_n: in
         legend={"orientation": "v", "x": 1.02, "y": 0.5, "yanchor": "middle"},
     )
     figure.update_layout(margin=_PIE_MARGIN)
+    return _to_static_png(figure)
+
+
+def render_agent_share_bar(*, agent_totals: Mapping[str, Mapping[str, int]]) -> bytes:
+    """Render each agent's share of lifetime tokens as a single 100%-stacked bar."""
+    totals = [
+        agent_totals.get(key, {}).get("headline_total", 0) for key, _, _ in _AGENT_SERIES
+    ]
+
+    if sum(totals) == 0:
+        figure = go.Figure()
+        figure.add_annotation(
+            text="No agent activity observed yet.",
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            font={"size": 16, "color": _AXIS},
+        )
+        figure.update_layout(**_base_layout(title="Agent Share", height=_AGENT_BAR_HEIGHT))
+        figure.update_xaxes(visible=False, fixedrange=True)
+        figure.update_yaxes(visible=False, fixedrange=True)
+        return _to_static_png(figure)
+
+    percentages = stacked_percentages(totals)
+    figure = go.Figure()
+    for (_, label, color), percentage in zip(_AGENT_SERIES, percentages, strict=True):
+        figure.add_trace(
+            go.Bar(
+                x=[percentage],
+                y=[""],
+                orientation="h",
+                name=label,
+                marker={"color": color},
+                text=f"{label}: {percentage}%",
+                textposition="inside",
+                insidetextanchor="middle",
+                hovertemplate=f"{label}<br>%{{x}}%<extra></extra>",
+            )
+        )
+    figure.update_layout(
+        **_base_layout(title="Agent Share", height=_AGENT_BAR_HEIGHT),
+        barmode="stack",
+        showlegend=False,
+    )
+    figure.update_layout(margin=_AGENT_BAR_MARGIN)
+    figure.update_xaxes(visible=False, range=[0, 100], fixedrange=True)
+    figure.update_yaxes(visible=False, fixedrange=True)
     return _to_static_png(figure)

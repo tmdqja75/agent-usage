@@ -5,6 +5,7 @@ from __future__ import annotations
 from agent_usage.render.plotly import (
     bucket_top_n,
     rank_usage,
+    render_agent_share_bar,
     render_stacked_token_chart,
     render_usage_pie_chart,
     stacked_percentages,
@@ -102,5 +103,48 @@ def test_render_usage_pie_chart_is_deterministic() -> None:
 
     first = render_usage_pie_chart(title="Skills", counters=counters, top_n=2)
     second = render_usage_pie_chart(title="Skills", counters=counters, top_n=2)
+
+    assert first == second
+
+
+def test_render_agent_share_bar_handles_no_activity() -> None:
+    image = render_agent_share_bar(
+        agent_totals={
+            "hermes_agent": {"headline_total": 0},
+            "claude_code": {"headline_total": 0},
+            "codex": {"headline_total": 0},
+        }
+    )
+
+    assert image.startswith(_PNG_SIGNATURE)
+
+
+def test_render_agent_share_bar_handles_missing_agent_keys() -> None:
+    image = render_agent_share_bar(agent_totals={})
+
+    assert image.startswith(_PNG_SIGNATURE)
+
+
+def test_render_agent_share_bar_renders_with_activity() -> None:
+    image = render_agent_share_bar(
+        agent_totals={
+            "hermes_agent": {"headline_total": 100},
+            "claude_code": {"headline_total": 300},
+            "codex": {"headline_total": 0},
+        }
+    )
+
+    assert image.startswith(_PNG_SIGNATURE)
+
+
+def test_render_agent_share_bar_is_deterministic() -> None:
+    agent_totals = {
+        "hermes_agent": {"headline_total": 100},
+        "claude_code": {"headline_total": 300},
+        "codex": {"headline_total": 50},
+    }
+
+    first = render_agent_share_bar(agent_totals=agent_totals)
+    second = render_agent_share_bar(agent_totals=agent_totals)
 
     assert first == second

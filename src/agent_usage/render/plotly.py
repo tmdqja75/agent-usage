@@ -37,6 +37,42 @@ def rank_usage(counters: Mapping[str, int]) -> list[tuple[str, int]]:
     return sorted(counters.items(), key=lambda item: (-item[1], item[0]))
 
 
+_OTHER_LABEL = "Other"
+
+
+def bucket_top_n(ranked: Sequence[tuple[str, int]], top_n: int) -> list[tuple[str, int]]:
+    """Keep the top ``top_n`` ranked entries, summing the rest into one 'Other' entry."""
+    kept = list(ranked[:top_n])
+    overflow = ranked[top_n:]
+    if overflow:
+        kept.append((_OTHER_LABEL, sum(count for _, count in overflow)))
+    return kept
+
+
+def stacked_percentages(totals: Sequence[int]) -> list[int]:
+    """Convert raw totals to whole percentages that always sum to exactly 100 (or all 0).
+
+    The last entry absorbs the rounding remainder so the segments of a
+    100%-stacked bar always tile exactly, regardless of how individual
+    shares round.
+    """
+    grand_total = sum(totals)
+    if grand_total == 0:
+        return [0 for _ in totals]
+
+    percentages: list[int] = []
+    running = 0
+    last_index = len(totals) - 1
+    for index, total in enumerate(totals):
+        if index == last_index:
+            percentages.append(100 - running)
+        else:
+            share = round(total / grand_total * 100)
+            running += share
+            percentages.append(share)
+    return percentages
+
+
 def _base_layout(*, title: str, height: int) -> dict:
     return {
         "width": CHART_WIDTH,

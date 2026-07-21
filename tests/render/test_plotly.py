@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from agent_usage.render.plotly import (
+    bucket_top_n,
     rank_usage,
     render_stacked_token_chart,
     render_usage_bar_chart,
+    stacked_percentages,
 )
 
 
@@ -37,6 +39,40 @@ def test_rank_usage_orders_most_used_first_then_name() -> None:
     ranked = rank_usage({"zeta": 3, "alpha": 3, "least": 1})
 
     assert ranked == [("alpha", 3), ("zeta", 3), ("least", 1)]
+
+
+def test_bucket_top_n_keeps_all_entries_when_under_the_cap() -> None:
+    ranked = [("alpha", 5), ("beta", 3)]
+
+    assert bucket_top_n(ranked, top_n=5) == [("alpha", 5), ("beta", 3)]
+
+
+def test_bucket_top_n_keeps_all_entries_when_exactly_at_the_cap() -> None:
+    ranked = [("alpha", 5), ("beta", 3)]
+
+    assert bucket_top_n(ranked, top_n=2) == [("alpha", 5), ("beta", 3)]
+
+
+def test_bucket_top_n_sums_overflow_into_an_other_entry() -> None:
+    ranked = [("alpha", 10), ("beta", 5), ("gamma", 3), ("delta", 1)]
+
+    result = bucket_top_n(ranked, top_n=2)
+
+    assert result == [("alpha", 10), ("beta", 5), ("Other", 4)]
+
+
+def test_stacked_percentages_sum_to_exactly_100() -> None:
+    assert sum(stacked_percentages([1, 1, 1])) == 100
+    assert sum(stacked_percentages([7, 2, 1])) == 100
+    assert sum(stacked_percentages([1, 0, 0])) == 100
+
+
+def test_stacked_percentages_all_zero_returns_all_zero() -> None:
+    assert stacked_percentages([0, 0, 0]) == [0, 0, 0]
+
+
+def test_stacked_percentages_preserves_input_order() -> None:
+    assert stacked_percentages([300, 100, 0]) == [75, 25, 0]
 
 
 def test_render_usage_bar_chart_handles_no_observed_usage() -> None:

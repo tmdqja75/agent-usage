@@ -6,7 +6,7 @@ from agent_usage.render.plotly import (
     bucket_top_n,
     rank_usage,
     render_stacked_token_chart,
-    render_usage_bar_chart,
+    render_usage_pie_chart,
     stacked_percentages,
 )
 
@@ -75,7 +75,32 @@ def test_stacked_percentages_preserves_input_order() -> None:
     assert stacked_percentages([300, 100, 0]) == [75, 25, 0]
 
 
-def test_render_usage_bar_chart_handles_no_observed_usage() -> None:
-    image = render_usage_bar_chart(title="Skills", counters={})
+def test_render_usage_pie_chart_handles_no_observed_usage() -> None:
+    image = render_usage_pie_chart(title="Skills", counters={}, top_n=6)
 
     assert image.startswith(_PNG_SIGNATURE)
+
+
+def test_render_usage_pie_chart_renders_within_the_cap() -> None:
+    image = render_usage_pie_chart(
+        title="Skills", counters={"alpha": 5, "beta": 3}, top_n=6
+    )
+
+    assert image.startswith(_PNG_SIGNATURE)
+
+
+def test_render_usage_pie_chart_renders_with_overflow_bucketed() -> None:
+    counters = {f"skill-{i}": 10 - i for i in range(10)}
+
+    image = render_usage_pie_chart(title="Skills", counters=counters, top_n=6)
+
+    assert image.startswith(_PNG_SIGNATURE)
+
+
+def test_render_usage_pie_chart_is_deterministic() -> None:
+    counters = {"alpha": 5, "beta": 3, "gamma": 1}
+
+    first = render_usage_pie_chart(title="Skills", counters=counters, top_n=2)
+    second = render_usage_pie_chart(title="Skills", counters=counters, top_n=2)
+
+    assert first == second

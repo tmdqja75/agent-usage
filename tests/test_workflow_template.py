@@ -128,6 +128,7 @@ def test_build_generates_readme_and_chart_assets(tmp_path: Path) -> None:
     charts_dir = tmp_path / "assets" / "agent-usage"
     rolling_chart = charts_dir / "token-activity-14d.png"
     total_chart = charts_dir / "token-activity-total.png"
+    agent_share_chart = charts_dir / "agent-share.png"
     skills_chart = charts_dir / "skills.png"
     mcp_chart = charts_dir / "mcp.png"
 
@@ -136,6 +137,7 @@ def test_build_generates_readme_and_chart_assets(tmp_path: Path) -> None:
         readme_path=readme_path,
         rolling_chart_path=rolling_chart,
         total_chart_path=total_chart,
+        agent_share_chart_path=agent_share_chart,
         skills_chart_path=skills_chart,
         mcp_chart_path=mcp_chart,
         today=date(2026, 7, 18),
@@ -148,6 +150,7 @@ def test_build_generates_readme_and_chart_assets(tmp_path: Path) -> None:
     png_signature = b"\x89PNG\r\n\x1a\n"
     assert rolling_chart.read_bytes().startswith(png_signature)
     assert total_chart.read_bytes().startswith(png_signature)
+    assert agent_share_chart.read_bytes().startswith(png_signature)
     assert skills_chart.read_bytes().startswith(png_signature)
     assert mcp_chart.read_bytes().startswith(png_signature)
 
@@ -315,5 +318,6 @@ def test_main_accepts_cli_arguments_and_exits_zero(tmp_path: Path, monkeypatch) 
 
     assert exit_code == 0
     assert readme_path.exists()
+    assert (tmp_path / "assets" / "agent-usage" / "agent-share.png").exists()
     assert (tmp_path / "assets" / "agent-usage" / "skills.png").exists()
     assert (tmp_path / "assets" / "agent-usage" / "mcp.png").exists()

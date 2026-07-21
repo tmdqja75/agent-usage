@@ -98,8 +98,15 @@ def render(
     output_dir: Path | None = typer.Option(
         None, "--output-dir", help="Where to write the local dashboard preview."
     ),
+    pie_top_n: int = typer.Option(
+        6,
+        "--pie-top-n",
+        help="Max Skills/MCP pie slices to show before bucketing the rest into 'Other'.",
+    ),
 ) -> None:
     """Render a local preview of the dashboard from this device's own collected data."""
+    if pie_top_n < 1:
+        raise typer.BadParameter("--pie-top-n must be at least 1")
     now = datetime.now(timezone.utc)
     config = load_config(config_file_path())
     resolved_output_dir = output_dir or (ledger_file_path().parent / "preview")
@@ -109,6 +116,7 @@ def render(
         privacy_policy=PrivacyPolicy.from_config(config),
         today=now.date(),
         generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
+        pie_top_n=pie_top_n,
     )
     typer.echo(f"agent-usage: preview written to {result.readme_path}")
     typer.echo(

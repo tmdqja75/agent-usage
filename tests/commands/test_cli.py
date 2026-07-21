@@ -150,6 +150,30 @@ def test_collect_then_render_produces_a_local_preview(tmp_path, monkeypatch) -> 
     assert (output_dir / "README.md").exists()
 
 
+def test_render_accepts_a_custom_pie_top_n(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+    _patch_missing_sources(monkeypatch, tmp_path)
+
+    runner.invoke(app, ["collect"])
+    output_dir = tmp_path / "preview"
+
+    result = runner.invoke(app, ["render", "--output-dir", str(output_dir), "--pie-top-n", "3"])
+
+    assert result.exit_code == 0
+    assert (output_dir / "README.md").exists()
+
+
+def test_render_rejects_a_pie_top_n_below_one(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+    _patch_missing_sources(monkeypatch, tmp_path)
+
+    output_dir = tmp_path / "preview"
+    result = runner.invoke(app, ["render", "--output-dir", str(output_dir), "--pie-top-n", "0"])
+
+    assert result.exit_code != 0
+    assert "pie-top-n" in result.output.lower()
+
+
 def test_publish_command_requires_a_repo_target(tmp_path, monkeypatch) -> None:
     _patch_local_paths(monkeypatch, tmp_path)
 

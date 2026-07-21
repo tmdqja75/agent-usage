@@ -23,6 +23,7 @@ from agent_usage.render.markdown import render_dashboard, update_readme
 
 _ROLLING_CHART_RELATIVE_PATH = Path("assets/agent-usage/token-activity-14d.png")
 _TOTAL_CHART_RELATIVE_PATH = Path("assets/agent-usage/token-activity-total.png")
+_AGENT_SHARE_CHART_RELATIVE_PATH = Path("assets/agent-usage/agent-share.png")
 _SKILLS_CHART_RELATIVE_PATH = Path("assets/agent-usage/skills.png")
 _MCP_CHART_RELATIVE_PATH = Path("assets/agent-usage/mcp.png")
 
@@ -54,6 +55,7 @@ def render(
     privacy_policy: PrivacyPolicy = PrivacyPolicy(),
     today: date,
     generated_at: str,
+    pie_top_n: int = 6,
 ) -> RenderResult:
     """Regenerate this device's local dashboard preview. Returns whether anything changed."""
     repository = LedgerRepository.open(ledger_path)
@@ -74,6 +76,7 @@ def render(
 
     rolling_chart_path = output_dir / _ROLLING_CHART_RELATIVE_PATH
     total_chart_path = output_dir / _TOTAL_CHART_RELATIVE_PATH
+    agent_share_chart_path = output_dir / _AGENT_SHARE_CHART_RELATIVE_PATH
     skills_chart_path = output_dir / _SKILLS_CHART_RELATIVE_PATH
     mcp_chart_path = output_dir / _MCP_CHART_RELATIVE_PATH
     dashboard = render_dashboard(
@@ -82,8 +85,10 @@ def render(
         generated_at=generated_at,
         rolling_chart_path=_ROLLING_CHART_RELATIVE_PATH.as_posix(),
         total_chart_path=_TOTAL_CHART_RELATIVE_PATH.as_posix(),
+        agent_share_chart_path=_AGENT_SHARE_CHART_RELATIVE_PATH.as_posix(),
         skills_chart_path=_SKILLS_CHART_RELATIVE_PATH.as_posix(),
         mcp_chart_path=_MCP_CHART_RELATIVE_PATH.as_posix(),
+        pie_top_n=pie_top_n,
     )
 
     readme_path = output_dir / "README.md"
@@ -94,6 +99,7 @@ def render(
     for chart_path, chart in (
         (rolling_chart_path, dashboard["charts"]["rolling"]),
         (total_chart_path, dashboard["charts"]["total"]),
+        (agent_share_chart_path, dashboard["charts"]["agent_share"]),
         (skills_chart_path, dashboard["charts"]["skills"]),
         (mcp_chart_path, dashboard["charts"]["mcp"]),
     ):

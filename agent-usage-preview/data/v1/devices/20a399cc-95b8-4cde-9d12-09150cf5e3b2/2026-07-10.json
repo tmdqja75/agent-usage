@@ -1,0 +1,52 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 303254,
+      "input_tokens": 142977,
+      "output_tokens": 160277,
+      "reasoning_tokens": 0,
+      "session_count": 6,
+      "source_status": "available_with_activity"
+    },
+    "codex": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "hermes_agent": {
+      "headline_total": 2115672,
+      "input_tokens": 1899758,
+      "output_tokens": 162820,
+      "reasoning_tokens": 53094,
+      "session_count": 16,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "7e499b52e0209addbf1e534ae659aa2d6bbe0eeb13f501a6a06ddb067c8dbd2b",
+  "date": "2026-07-10",
+  "device_id": "20a399cc-95b8-4cde-9d12-09150cf5e3b2",
+  "mcp_servers": {
+    "playwriter_latest": 4
+  },
+  "mcp_tools": {
+    "playwriter_latest/execute": 4
+  },
+  "schema_version": 1,
+  "skills": {
+    "autonomous-ai-agents:claude-code": 1,
+    "caveman-commit": 1,
+    "claude-code": 2,
+    "dataviz": 1,
+    "github-workflows": 1,
+    "hermes-agent": 2,
+    "notion-cli": 1,
+    "software-development-lifecycle": 11,
+    "systematic-debugging": 5,
+    "test-driven-development": 8,
+    "using-superpowers": 5,
+    "verification-before-completion": 13
+  }
+}

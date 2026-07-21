@@ -1,0 +1,53 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "codex": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "hermes_agent": {
+      "headline_total": 3146273,
+      "input_tokens": 2722143,
+      "output_tokens": 311039,
+      "reasoning_tokens": 113091,
+      "session_count": 30,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "d60c7d52b93d9c22f99816a77d062b1aef297758651f461e29db91612a9d16d1",
+  "date": "2026-07-20",
+  "device_id": "20a399cc-95b8-4cde-9d12-09150cf5e3b2",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "(hidden)": 3,
+    "brainstorming": 2,
+    "executing-plans": 1,
+    "hermes-agent": 3,
+    "hermes-kanban-operations": 25,
+    "mlops-model-operations": 3,
+    "p0-manifest-freeze-procedure": 1,
+    "playwriter": 1,
+    "requesting-code-review": 2,
+    "research-knowledge-workflows": 1,
+    "software-development-lifecycle": 17,
+    "systematic-debugging": 2,
+    "test-driven-development": 7,
+    "using-superpowers": 4,
+    "verification-before-completion": 14,
+    "visual-artifact-design": 1,
+    "writing-plans": 1
+  }
+}

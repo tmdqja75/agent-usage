@@ -14,7 +14,11 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from agent_usage.aggregate import aggregate_records, daily_token_totals, rolling_window
-from agent_usage.render.plotly import render_stacked_token_chart, render_usage_bar_chart
+from agent_usage.render.plotly import (
+    render_agent_share_bar,
+    render_stacked_token_chart,
+    render_usage_pie_chart,
+)
 
 MARKER_START = "<!-- agent-usage:start -->"
 MARKER_END = "<!-- agent-usage:end -->"
@@ -22,6 +26,7 @@ MARKER_END = "<!-- agent-usage:end -->"
 _ROLLING_WINDOW_DAYS = 14
 _DEFAULT_ROLLING_CHART_PATH = "assets/agent-usage/token-activity-14d.png"
 _DEFAULT_TOTAL_CHART_PATH = "assets/agent-usage/token-activity-total.png"
+_DEFAULT_AGENT_SHARE_CHART_PATH = "assets/agent-usage/agent-share.png"
 _DEFAULT_SKILLS_CHART_PATH = "assets/agent-usage/skills.png"
 _DEFAULT_MCP_CHART_PATH = "assets/agent-usage/mcp.png"
 
@@ -30,6 +35,7 @@ def render_dashboard_markdown(
     *,
     rolling_chart_path: str = _DEFAULT_ROLLING_CHART_PATH,
     total_chart_path: str = _DEFAULT_TOTAL_CHART_PATH,
+    agent_share_chart_path: str = _DEFAULT_AGENT_SHARE_CHART_PATH,
     skills_chart_path: str = _DEFAULT_SKILLS_CHART_PATH,
     mcp_chart_path: str = _DEFAULT_MCP_CHART_PATH,
 ) -> str:
@@ -38,23 +44,17 @@ def render_dashboard_markdown(
         MARKER_START,
         "## Token Usage",
         "",
-        "### Rolling 14 Days Activity",
-        "",
         f"![Rolling 14 days input, output, and reasoning token activity]({rolling_chart_path})",
-        "",
-        "## Total Activity",
-        "",
         f"![Total input, output, and reasoning token activity]({total_chart_path})",
         "",
-        "## Skill/MCP Usage",
+        "## Agent Share",
         "",
-        "### Skills",
+        f"![Agent usage share by lifetime tokens]({agent_share_chart_path})",
         "",
-        f"![Skill usage]({skills_chart_path})",
+        "## Skill / MCP Usage",
         "",
-        "### MCP",
-        "",
-        f"![MCP usage]({mcp_chart_path})",
+        f"| ![Skill usage]({skills_chart_path}) | ![MCP usage]({mcp_chart_path}) |",
+        "|---|---|",
         "",
         MARKER_END,
     ]
@@ -86,10 +86,12 @@ def render_dashboard(
     generated_at: str,
     rolling_chart_path: str = _DEFAULT_ROLLING_CHART_PATH,
     total_chart_path: str = _DEFAULT_TOTAL_CHART_PATH,
+    agent_share_chart_path: str = _DEFAULT_AGENT_SHARE_CHART_PATH,
     skills_chart_path: str = _DEFAULT_SKILLS_CHART_PATH,
     mcp_chart_path: str = _DEFAULT_MCP_CHART_PATH,
+    pie_top_n: int = 6,
 ) -> dict:
-    """Build the full dashboard: Markdown plus four static Plotly PNG charts.
+    """Build the full dashboard: Markdown plus five static Plotly PNG charts.
 
     ``payloads`` should already be validated (see
     :func:`agent_usage.aggregate.validate_and_partition`). Pure function of
@@ -124,13 +126,19 @@ def render_dashboard(
             title="Rolling 14 Days Activity", series=rolling_series
         ),
         "total": render_stacked_token_chart(title="Total Activity", series=total_series),
-        "skills": render_usage_bar_chart(title="Skills", counters=lifetime_summary["skills"]),
-        "mcp": render_usage_bar_chart(title="MCP", counters=lifetime_summary["mcp_servers"]),
+        "agent_share": render_agent_share_bar(agent_totals=lifetime_summary["agents"]),
+        "skills": render_usage_pie_chart(
+            title="Skills", counters=lifetime_summary["skills"], top_n=pie_top_n
+        ),
+        "mcp": render_usage_pie_chart(
+            title="MCP", counters=lifetime_summary["mcp_servers"], top_n=pie_top_n
+        ),
     }
 
     markdown = render_dashboard_markdown(
         rolling_chart_path=rolling_chart_path,
         total_chart_path=total_chart_path,
+        agent_share_chart_path=agent_share_chart_path,
         skills_chart_path=skills_chart_path,
         mcp_chart_path=mcp_chart_path,
     )

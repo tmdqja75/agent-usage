@@ -16,11 +16,12 @@ def test_run_builds_payload_and_serves(monkeypatch, tmp_path):
         dashboard_command, "ensure_build", lambda ui_dir, *, force: ui_dir / "dist"
     )
 
-    def fake_serve(data, *, dist_dir, port, open_browser):
+    def fake_serve(data, *, dist_dir, port, open_browser, lang):
         calls["data"] = data
         calls["dist_dir"] = dist_dir
         calls["port"] = port
         calls["open_browser"] = open_browser
+        calls["lang"] = lang
 
     monkeypatch.setattr(dashboard_command, "serve", fake_serve)
 
@@ -34,6 +35,7 @@ def test_run_builds_payload_and_serves(monkeypatch, tmp_path):
         port=8123,
         open_browser=False,
         pie_top_n=6,
+        lang="ko",
         ui_dir=ui_dir,
         force_build=False,
         today=date(2026, 7, 18),
@@ -44,6 +46,7 @@ def test_run_builds_payload_and_serves(monkeypatch, tmp_path):
     assert calls["dist_dir"] == ui_dir / "dist"
     assert calls["port"] == 8123
     assert calls["open_browser"] is False
+    assert calls["lang"] == "ko"
 
 
 def test_run_reports_missing_repo_target(monkeypatch, tmp_path):
@@ -65,6 +68,7 @@ def test_run_reports_missing_repo_target(monkeypatch, tmp_path):
             port=8000,
             open_browser=False,
             pie_top_n=6,
+            lang="ko",
             ui_dir=ui_dir,
             force_build=False,
             today=date(2026, 7, 18),

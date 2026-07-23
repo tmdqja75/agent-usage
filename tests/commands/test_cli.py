@@ -182,6 +182,16 @@ def test_render_rejects_a_pie_top_n_below_one(tmp_path, monkeypatch) -> None:
     assert "pie-top-n" in _strip_ansi(result.output).lower()
 
 
+def test_dashboard_rejects_an_invalid_lang(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+    _patch_missing_sources(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["dashboard", "--lang", "fr", "--no-open"])
+
+    assert result.exit_code != 0
+    assert "lang" in _strip_ansi(result.output).lower()
+
+
 def test_publish_command_requires_a_repo_target(tmp_path, monkeypatch) -> None:
     _patch_local_paths(monkeypatch, tmp_path)
 

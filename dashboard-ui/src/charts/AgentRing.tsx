@@ -11,7 +11,7 @@ import {
   LegendValue,
 } from "@/components/charts/legend";
 import { agentColor, agentLabel, CATEGORY_COLORS } from "./names";
-import { t } from "@/i18n";
+import { getLang, t } from "@/i18n";
 
 export type AgentDatum = { agent: string; tokens: number };
 
@@ -52,7 +52,10 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
         ))}
         <RingCenter
           defaultLabel={t("center.totalTokens")}
-          formatOptions={{ notation: "compact", maximumFractionDigits: 1 }}
+          formatOptions={{
+            notation: "compact",
+            maximumFractionDigits: getLang() === "ko" ? 0 : 1,
+          }}
         />
       </RingChart>
       <Legend items={items} hoveredIndex={hoveredIndex} onHoverChange={setHoveredIndex}>

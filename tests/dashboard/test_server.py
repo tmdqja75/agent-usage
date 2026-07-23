@@ -36,6 +36,30 @@ def test_server_serves_index_and_injects_data_json(tmp_path):
         thread.join(timeout=5)
 
 
+def test_server_injects_lang_into_html(tmp_path):
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text(
+        '<!doctype html><html lang="en"><head></head><body><div id="root"></div></body></html>',
+        encoding="utf-8",
+    )
+
+    server = make_server({}, dist_dir=dist, port=0, lang="ko")
+    host, port = server.server_address
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base = f"http://127.0.0.1:{port}"
+        status, body, _ = _get(f"{base}/")
+        assert status == 200
+        assert b'window.__LANG__="ko";' in body
+        assert b'lang="ko"' in body
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def test_server_binds_loopback_only(tmp_path):
     dist = tmp_path / "dist"
     dist.mkdir()

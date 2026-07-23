@@ -52,6 +52,37 @@ open ./agent-usage-preview/README.md
 
 Omit `--output-dir` to write the preview alongside the private ledger.
 
+## Interactive localhost dashboard
+
+`agent-usage dashboard` serves an interactive chart dashboard on
+`127.0.0.1` (loopback only) from your local ledger data. The React UI is built
+**on demand** the first time you run the command and cached under
+`dashboard-ui/dist/`; it is rebuilt only when the UI source changes.
+
+```sh
+uv run agent-usage dashboard
+```
+
+This builds the payload, compiles the UI if needed, starts the server, and
+opens your browser. Press Ctrl-C to stop.
+
+Requirements: Node.js and pnpm (or npm) must be installed to build the UI. The
+build output is a local, gitignored artifact — no bundle is committed.
+
+Flags:
+
+- `--all-devices` — aggregate multi-device data by shallow-cloning the
+  configured profile repository (never the GitHub API), instead of local data.
+- `--port` — localhost port to serve on (default `8000`).
+- `--no-open` — do not open a browser automatically.
+- `--rebuild` — force a fresh UI build even if the cached build looks current.
+- `--pie-top-n` — max Skills/MCP pie slices before bucketing the rest into
+  `Other` (default `6`).
+
+The dashboard renders five blocks: total token usage over the rolling window,
+usage by agent, Skills and MCP usage donuts, and a calendar activity heatmap.
+It fetches `/data.json` from the local server when the page opens.
+
 ## What the collector reads
 
 The first release supports these local sources:

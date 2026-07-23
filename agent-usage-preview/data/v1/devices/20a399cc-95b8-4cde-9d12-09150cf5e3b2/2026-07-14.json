@@ -1,0 +1,51 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 112269,
+      "input_tokens": 86823,
+      "output_tokens": 25446,
+      "reasoning_tokens": 0,
+      "session_count": 4,
+      "source_status": "available_with_activity"
+    },
+    "codex": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "hermes_agent": {
+      "headline_total": 583082,
+      "input_tokens": 515743,
+      "output_tokens": 54913,
+      "reasoning_tokens": 12426,
+      "session_count": 14,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "24a135812afde92f599e371da9098c8cabf3ce09ba8b3fc785d6ebced5681898",
+  "date": "2026-07-14",
+  "device_id": "20a399cc-95b8-4cde-9d12-09150cf5e3b2",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "(hidden)": 4,
+    "autonomous-ai-agents:claude-code": 1,
+    "autonomous-ai-agents:hermes-agent": 1,
+    "aws-cost-optimization-audits": 1,
+    "brainstorming": 1,
+    "claude-code": 2,
+    "creative": 1,
+    "devops:hermes-kanban-operations": 1,
+    "dspy": 1,
+    "hermes-agent": 5,
+    "hermes-service-troubleshooting": 1,
+    "langgraph-fundamentals": 2,
+    "systematic-debugging": 1,
+    "test-driven-development": 1,
+    "visual-artifact-design": 1
+  }
+}

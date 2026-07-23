@@ -32,6 +32,7 @@ DEFAULT_DATA_DIR = Path("data/v1/devices")
 DEFAULT_README = Path("README.md")
 DEFAULT_ROLLING_CHART = Path("assets/agent-usage/token-activity-14d.png")
 DEFAULT_TOTAL_CHART = Path("assets/agent-usage/token-activity-total.png")
+DEFAULT_AGENT_SHARE_CHART = Path("assets/agent-usage/agent-share.png")
 DEFAULT_SKILLS_CHART = Path("assets/agent-usage/skills.png")
 DEFAULT_MCP_CHART = Path("assets/agent-usage/mcp.png")
 
@@ -84,9 +85,11 @@ def build(
     readme_path: Path,
     rolling_chart_path: Path,
     total_chart_path: Path | None = None,
+    agent_share_chart_path: Path | None = None,
     skills_chart_path: Path | None = None,
     mcp_chart_path: Path | None = None,
     lifetime_chart_path: Path | None = None,
+    pie_top_n: int = 6,
     today: date,
     generated_at: str,
 ) -> bool:
@@ -96,6 +99,7 @@ def build(
             raise ValueError("total_chart_path is required")
         total_chart_path = lifetime_chart_path.with_suffix(".png")
     chart_dir = total_chart_path.parent
+    agent_share_chart_path = agent_share_chart_path or chart_dir / DEFAULT_AGENT_SHARE_CHART.name
     skills_chart_path = skills_chart_path or chart_dir / DEFAULT_SKILLS_CHART.name
     mcp_chart_path = mcp_chart_path or chart_dir / DEFAULT_MCP_CHART.name
 
@@ -114,8 +118,12 @@ def build(
         generated_at=generated_at,
         rolling_chart_path=_readme_relative_path(rolling_chart_path, readme_path=readme_path),
         total_chart_path=_readme_relative_path(total_chart_path, readme_path=readme_path),
+        agent_share_chart_path=_readme_relative_path(
+            agent_share_chart_path, readme_path=readme_path
+        ),
         skills_chart_path=_readme_relative_path(skills_chart_path, readme_path=readme_path),
         mcp_chart_path=_readme_relative_path(mcp_chart_path, readme_path=readme_path),
+        pie_top_n=pie_top_n,
     )
 
     existing_readme = (
@@ -127,6 +135,7 @@ def build(
     for chart_path, chart in (
         (rolling_chart_path, dashboard["charts"]["rolling"]),
         (total_chart_path, dashboard["charts"]["total"]),
+        (agent_share_chart_path, dashboard["charts"]["agent_share"]),
         (skills_chart_path, dashboard["charts"]["skills"]),
         (mcp_chart_path, dashboard["charts"]["mcp"]),
     ):
@@ -141,8 +150,10 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--rolling-chart", type=Path, default=DEFAULT_ROLLING_CHART)
     parser.add_argument("--total-chart", type=Path, default=DEFAULT_TOTAL_CHART)
     parser.add_argument("--lifetime-chart", type=Path, dest="lifetime_chart", help=argparse.SUPPRESS)
+    parser.add_argument("--agent-share-chart", type=Path, default=DEFAULT_AGENT_SHARE_CHART)
     parser.add_argument("--skills-chart", type=Path, default=DEFAULT_SKILLS_CHART)
     parser.add_argument("--mcp-chart", type=Path, default=DEFAULT_MCP_CHART)
+    parser.add_argument("--pie-top-n", type=int, default=6)
     parser.add_argument(
         "--today",
         type=date.fromisoformat,
@@ -169,6 +180,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.rolling_chart == DEFAULT_ROLLING_CHART
         else args.rolling_chart
     )
+    agent_share_chart_path = (
+        default_chart_dir / DEFAULT_AGENT_SHARE_CHART.name
+        if args.agent_share_chart == DEFAULT_AGENT_SHARE_CHART
+        else args.agent_share_chart
+    )
     skills_chart_path = (
         default_chart_dir / DEFAULT_SKILLS_CHART.name
         if args.skills_chart == DEFAULT_SKILLS_CHART
@@ -190,9 +206,11 @@ def main(argv: list[str] | None = None) -> int:
         readme_path=args.readme,
         rolling_chart_path=rolling_chart_path,
         total_chart_path=total_chart_path if args.lifetime_chart is None else None,
+        agent_share_chart_path=agent_share_chart_path,
         skills_chart_path=skills_chart_path,
         mcp_chart_path=mcp_chart_path,
         lifetime_chart_path=args.lifetime_chart,
+        pie_top_n=args.pie_top_n,
         today=today,
         generated_at=generated_at,
     )

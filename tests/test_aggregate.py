@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from agent_usage.aggregate import (
     MAX_PAYLOAD_BYTES,
     aggregate_records,
+    daily_agent_totals,
     daily_token_totals,
     daily_totals,
     monthly_totals,
@@ -347,6 +348,57 @@ def test_daily_totals_sums_headline_total_across_agents_and_devices() -> None:
 
     assert totals["2026-07-10"] == 15 + 28
     assert totals["2026-07-11"] == 2
+
+
+def test_daily_agent_totals_groups_per_agent_and_sums_devices() -> None:
+    payloads = [
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 10),
+            agent=SupportedAgent.CLAUDE_CODE,
+            input_tokens=10,
+            output_tokens=5,
+            reasoning_tokens=0,
+        ),
+        _payload(
+            device_id="device-b",
+            day=date(2026, 7, 10),
+            agent=SupportedAgent.CLAUDE_CODE,
+            input_tokens=20,
+            output_tokens=8,
+            reasoning_tokens=0,
+        ),
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 10),
+            agent=SupportedAgent.CODEX,
+            input_tokens=1,
+            output_tokens=1,
+            reasoning_tokens=0,
+        ),
+    ]
+
+    totals = daily_agent_totals(payloads)
+
+    assert totals["2026-07-10"] == {"claude_code": 15 + 28, "codex": 2}
+
+
+def test_daily_agent_totals_omits_zero_agents() -> None:
+    payloads = [
+        _payload(
+            device_id="device-a",
+            day=date(2026, 7, 10),
+            agent=SupportedAgent.CLAUDE_CODE,
+            input_tokens=0,
+            output_tokens=0,
+            reasoning_tokens=0,
+            status=SourceStatus.AVAILABLE_WITH_ZERO_ACTIVITY,
+        ),
+    ]
+
+    totals = daily_agent_totals(payloads)
+
+    assert totals["2026-07-10"] == {}
 
 
 def test_daily_totals_omits_days_with_no_payload_at_all() -> None:

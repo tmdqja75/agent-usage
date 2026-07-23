@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 import typer
 
 from agent_usage.commands import collect as collect_command
+from agent_usage.commands import dashboard as dashboard_command
 from agent_usage.commands import doctor as doctor_command
 from agent_usage.commands import init as init_command
 from agent_usage.commands import publish as publish_command
@@ -98,8 +100,15 @@ def render(
     output_dir: Path | None = typer.Option(
         None, "--output-dir", help="Where to write the local dashboard preview."
     ),
+    pie_top_n: int = typer.Option(
+        6,
+        "--pie-top-n",
+        help="Max Skills/MCP pie slices to show before bucketing the rest into 'Other'.",
+    ),
 ) -> None:
     """Render a local preview of the dashboard from this device's own collected data."""
+    if pie_top_n < 1:
+        raise typer.BadParameter("--pie-top-n must be at least 1")
     now = datetime.now(timezone.utc)
     config = load_config(config_file_path())
     resolved_output_dir = output_dir or (ledger_file_path().parent / "preview")
@@ -109,11 +118,49 @@ def render(
         privacy_policy=PrivacyPolicy.from_config(config),
         today=now.date(),
         generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
+        pie_top_n=pie_top_n,
     )
     typer.echo(f"agent-usage: preview written to {result.readme_path}")
     typer.echo(
         "agent-usage: dashboard changed" if result.changed else "agent-usage: dashboard unchanged"
     )
+
+
+@app.command()
+def dashboard(
+    all_devices: bool = typer.Option(
+        False, "--all-devices", help="Aggregate multi-device data cloned from the profile repo."
+    ),
+    port: int = typer.Option(8000, "--port", help="Localhost port to serve on."),
+    no_open: bool = typer.Option(False, "--no-open", help="Do not open a browser automatically."),
+    rebuild: bool = typer.Option(
+        False, "--rebuild", help="Force a fresh UI build even if the cached build looks current."
+    ),
+    pie_top_n: int = typer.Option(
+        6, "--pie-top-n", help="Max Skills/MCP pie slices before bucketing the rest into 'Other'."
+    ),
+) -> None:
+    """Serve an interactive localhost usage dashboard (local data, or --all-devices)."""
+    if pie_top_n < 1:
+        raise typer.BadParameter("--pie-top-n must be at least 1")
+    now = datetime.now(timezone.utc)
+    with tempfile.TemporaryDirectory(prefix="agent-usage-dash-") as tmp:
+        try:
+            dashboard_command.run(
+                ledger_path=ledger_file_path(),
+                config_path=config_file_path(),
+                all_devices=all_devices,
+                port=port,
+                open_browser=not no_open,
+                pie_top_n=pie_top_n,
+                ui_dir=dashboard_command.UI_DIR,
+                force_build=rebuild,
+                today=now.date(),
+                tmp_stage_dir=Path(tmp),
+            )
+        except dashboard_command.DashboardError as error:
+            typer.echo(f"agent-usage: {error}")
+            raise typer.Exit(code=1) from error
 
 
 @app.command()

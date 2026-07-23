@@ -270,6 +270,24 @@ def daily_totals(payloads: list[dict]) -> dict[str, int]:
     return totals
 
 
+def daily_agent_totals(payloads: list[dict]) -> dict[str, dict[str, int]]:
+    """Sum headline_total per agent for each day with data.
+
+    Agents with zero total for a day are omitted from that day's dict.
+    Same no-data-means-absent contract as :func:`daily_totals` for dates.
+    """
+    totals: dict[str, dict[str, int]] = {}
+    for payload in payloads:
+        date_str = payload["date"]
+        day_totals = totals.setdefault(date_str, {})
+        for agent_name, agent_data in payload.get("agents", {}).items():
+            headline = agent_data["headline_total"]
+            if headline == 0:
+                continue
+            day_totals[agent_name] = day_totals.get(agent_name, 0) + headline
+    return totals
+
+
 def daily_token_totals(payloads: list[dict]) -> dict[str, dict[str, int] | None]:
     """Sum daily input/output/reasoning tokens from observable agent sources.
 

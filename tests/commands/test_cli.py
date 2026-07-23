@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import re
+
 from typer.testing import CliRunner
 
 import agent_usage.cli as cli_module
 from agent_usage.cli import app
 
 runner = CliRunner()
+
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI_ESCAPE.sub("", text)
 
 
 def _patch_local_paths(monkeypatch, tmp_path):
@@ -148,6 +156,30 @@ def test_collect_then_render_produces_a_local_preview(tmp_path, monkeypatch) -> 
 
     assert render_result.exit_code == 0
     assert (output_dir / "README.md").exists()
+
+
+def test_render_accepts_a_custom_pie_top_n(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+    _patch_missing_sources(monkeypatch, tmp_path)
+
+    runner.invoke(app, ["collect"])
+    output_dir = tmp_path / "preview"
+
+    result = runner.invoke(app, ["render", "--output-dir", str(output_dir), "--pie-top-n", "3"])
+
+    assert result.exit_code == 0
+    assert (output_dir / "README.md").exists()
+
+
+def test_render_rejects_a_pie_top_n_below_one(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+    _patch_missing_sources(monkeypatch, tmp_path)
+
+    output_dir = tmp_path / "preview"
+    result = runner.invoke(app, ["render", "--output-dir", str(output_dir), "--pie-top-n", "0"])
+
+    assert result.exit_code != 0
+    assert "pie-top-n" in _strip_ansi(result.output).lower()
 
 
 def test_publish_command_requires_a_repo_target(tmp_path, monkeypatch) -> None:

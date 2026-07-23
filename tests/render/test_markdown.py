@@ -46,14 +46,18 @@ def test_render_dashboard_produces_only_the_requested_readme_sections_and_plotly
     assert result["markdown"].count(MARKER_START) == 1
     assert result["markdown"].count(MARKER_END) == 1
     assert "## Token Usage" in result["markdown"]
-    assert "### Rolling 14 Days Activity" in result["markdown"]
-    assert "## Total Activity" in result["markdown"]
-    assert "## Skill/MCP Usage" in result["markdown"]
-    assert "### Skills" in result["markdown"]
-    assert "### MCP" in result["markdown"]
+    assert "## Agent Share" in result["markdown"]
+    assert "## Skill / MCP Usage" in result["markdown"]
+    assert "### Rolling 14 Days Activity" not in result["markdown"]
+    assert "## Total Activity" not in result["markdown"]
+    assert "### Skills" not in result["markdown"]
+    assert "### MCP" not in result["markdown"]
+    assert "| ![Skill usage]" in result["markdown"]
+    assert "| ![MCP usage]" in result["markdown"]
+    assert "|---|---|" in result["markdown"]
     assert "Source Health" not in result["markdown"]
     assert "Last updated" not in result["markdown"]
-    assert "|" not in result["markdown"]
+    assert set(result["charts"]) == {"rolling", "total", "agent_share", "skills", "mcp"}
     for asset in result["charts"].values():
         assert asset.startswith(b"\x89PNG\r\n\x1a\n")
 

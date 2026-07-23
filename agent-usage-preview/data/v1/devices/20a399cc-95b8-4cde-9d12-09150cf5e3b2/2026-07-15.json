@@ -1,0 +1,54 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "codex": {
+      "headline_total": 1188950,
+      "input_tokens": 1176270,
+      "output_tokens": 8962,
+      "reasoning_tokens": 3718,
+      "session_count": 1,
+      "source_status": "available_with_activity"
+    },
+    "hermes_agent": {
+      "headline_total": 4731993,
+      "input_tokens": 4356765,
+      "output_tokens": 285486,
+      "reasoning_tokens": 89742,
+      "session_count": 42,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "88b65137f1ad6ca45a366dc9fed014457ca969718f992770edacd4fccbc084b8",
+  "date": "2026-07-15",
+  "device_id": "20a399cc-95b8-4cde-9d12-09150cf5e3b2",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "(hidden)": 6,
+    "executing-plans": 1,
+    "finishing-a-development-branch": 2,
+    "github-workflows": 6,
+    "hermes-agent": 4,
+    "hermes-kanban-operations": 2,
+    "hermes-tool-system-internals": 1,
+    "karpathy-guidelines": 1,
+    "receiving-code-review": 5,
+    "requesting-code-review": 4,
+    "software-development-lifecycle": 27,
+    "superpowers:writing-plans": 2,
+    "systematic-debugging": 4,
+    "test-driven-development": 12,
+    "using-git-worktrees": 4,
+    "using-superpowers": 8,
+    "verification-before-completion": 29,
+    "writing-plans": 2
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 115438,
+      "input_tokens": 76685,
+      "output_tokens": 38753,
+      "reasoning_tokens": 0,
+      "session_count": 1,
+      "source_status": "available_with_activity"
+    },
+    "codex": {
+      "headline_total": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "reasoning_tokens": 0,
+      "session_count": 0,
+      "source_status": "source_unavailable"
+    },
+    "hermes_agent": {
+      "headline_total": 498683,
+      "input_tokens": 488733,
+      "output_tokens": 8036,
+      "reasoning_tokens": 1914,
+      "session_count": 12,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "33b00baefc9475f1d6d117b776900f1fc9656c97bc376bfacae716c9a29e6fa7",
+  "date": "2026-07-13",
+  "device_id": "20a399cc-95b8-4cde-9d12-09150cf5e3b2",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "(hidden)": 3,
+    "autonomous-ai-agents:claude-code": 2,
+    "claude-code": 3,
+    "hermes-agent": 5,
+    "hermes-messaging-platform-setup": 1,
+    "langgraph-fundamentals": 1,
+    "native-mcp": 2,
+    "using-superpowers": 1
+  }
+}

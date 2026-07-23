@@ -1,0 +1,57 @@
+{
+  "agents": {
+    "claude_code": {
+      "headline_total": 411232,
+      "input_tokens": 389019,
+      "output_tokens": 22213,
+      "reasoning_tokens": 0,
+      "session_count": 11,
+      "source_status": "available_with_activity"
+    },
+    "codex": {
+      "headline_total": 563503,
+      "input_tokens": 554374,
+      "output_tokens": 7522,
+      "reasoning_tokens": 1607,
+      "session_count": 4,
+      "source_status": "available_with_activity"
+    },
+    "hermes_agent": {
+      "headline_total": 2709745,
+      "input_tokens": 2427820,
+      "output_tokens": 203425,
+      "reasoning_tokens": 78500,
+      "session_count": 20,
+      "source_status": "available_with_activity"
+    }
+  },
+  "checksum": "b3934ed898ec38f5b51f071fbef7984468791588ddf5054fd6f787c709f7810e",
+  "date": "2026-07-16",
+  "device_id": "20a399cc-95b8-4cde-9d12-09150cf5e3b2",
+  "mcp_servers": {},
+  "mcp_tools": {},
+  "schema_version": 1,
+  "skills": {
+    "(hidden)": 8,
+    "autonomous-ai-agents:hermes-agent": 1,
+    "brainstorming": 3,
+    "devops:hermes-kanban-operations": 2,
+    "dspy": 2,
+    "github-workflows": 1,
+    "hermes-agent": 2,
+    "hermes-external-skills": 2,
+    "hermes-kanban-operations": 7,
+    "humanize-korean": 5,
+    "media-content-production": 1,
+    "requesting-code-review": 2,
+    "research-knowledge-workflows": 3,
+    "research:research-knowledge-workflows": 1,
+    "software-development-lifecycle": 4,
+    "software-development:software-development-lifecycle": 2,
+    "using-superpowers": 1,
+    "verification-before-completion": 3,
+    "watch": 2,
+    "watch:watch": 4,
+    "web-source-integration": 3
+  }
+}

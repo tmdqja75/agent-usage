@@ -27,7 +27,7 @@ See [README.md](README.md) for the user-facing guide.
 | `doctor` | Read-only diagnostics; no ledger writes, no checkpoint advance. |
 | `collect` | Read sources and persist normalized records (`--dry-run` to preview). |
 | `render` | Write a fully local Plotly PNG dashboard preview (no network). |
-| `dashboard` | Serve an interactive localhost chart dashboard (see below). |
+| `dashboard` | Serve an interactive localhost chart dashboard (see below); supports `--lang en\|ko`. |
 | `publish` | Stage and push this device's sanitized aggregates (opt-in, `gh` auth). |
 | `init` | Local-only: record `OWNER/REPO` target, ensure device ID. |
 | `schedule` | Install/remove a `launchd` daily collect+publish job. |
@@ -40,7 +40,8 @@ See [README.md](README.md) for the user-facing guide.
     `data.json` builder), `_counters.py` (shared rank/bucket helpers, backend-neutral).
   - `dashboard/` — interactive dashboard: `payload.py` (assemble data.json from local
     or multi-device), `remote.py` (shallow-clone multi-device fetch), `server.py`
-    (stdlib loopback HTTP server), `ui_build.py` (on-demand UI build with caching).
+    (stdlib loopback HTTP server; injects `window.__LANG__` into served
+    `index.html` for `--lang`), `ui_build.py` (on-demand UI build with caching).
   - `commands/` — one module per CLI command; `cli.py` wires them with Typer.
   - `ledger/`, `publish/`, `privacy.py`, `public_data.py`, `config.py`, `models.py`.
 - `dashboard-ui/` — React + Vite + TypeScript source for the interactive dashboard.
@@ -54,6 +55,8 @@ See [README.md](README.md) for the user-facing guide.
     `TokenArea` (AreaChart + tooltip), `AgentRing` (RingChart + Legend),
     `UsageDonut` (PieChart, Skills + MCP), plus the custom `CalendarHeatmap` and
     the `names.ts` label/palette map.
+  - `src/i18n.ts` — translation lookup and locale-aware number/date formatting,
+    driven by `window.__LANG__` (`en` or `ko`).
   Built on demand by `dashboard/ui_build.py`; `node_modules/` and `dist/` are gitignored.
 - `tests/` — mirrors the package (`tests/render/`, `tests/dashboard/`, `tests/commands/`).
   Test dirs use no `__init__.py`.

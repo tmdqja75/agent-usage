@@ -89,6 +89,8 @@ Flags:
 - `--rebuild` — force a fresh UI build even if the cached build looks current.
 - `--pie-top-n` — max Skills/MCP pie slices before bucketing the rest into
   `Other` (default `6`).
+- `--lang` — dashboard UI language: `en` (default) or `ko`. Localizes chart
+  titles, legends, tooltips, number formatting, and date formatting.
 
 The dashboard renders five blocks: total token usage over the rolling window,
 usage by agent (ring chart), Skills and MCP usage pies, and a calendar activity

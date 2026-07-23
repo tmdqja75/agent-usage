@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { TooltipContent } from "@/components/charts/tooltip/tooltip-content";
 import { agentLabel, CATEGORY_COLORS } from "./names";
+import { t } from "@/i18n";
 
 export type HeatDatum = {
   date: string;
@@ -23,7 +24,7 @@ function iso(d: Date): string {
 export function CalendarHeatmap({ data }: { data: HeatDatum[] }) {
   const [hover, setHover] = useState<{ x: number; y: number; datum: HeatDatum } | null>(null);
 
-  if (data.length === 0) return <div className="empty">No activity recorded yet.</div>;
+  if (data.length === 0) return <div className="empty">{t("state.noActivity")}</div>;
 
   const byDatum = new Map(data.map((d) => [d.date, d]));
   const byDate = new Map(data.map((d) => [d.date, d.tokens]));
@@ -100,17 +101,17 @@ export function CalendarHeatmap({ data }: { data: HeatDatum[] }) {
                     color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
                     value: `${Math.round((a.tokens / hover.datum.tokens) * 100)}%`,
                   }))
-                : [{ label: "Tokens", color: SCALE[SCALE.length - 1], value: hover.datum.tokens }]
+                : [{ label: t("heatmap.tokens"), color: SCALE[SCALE.length - 1], value: hover.datum.tokens }]
             }
           />
         </div>
       )}
       <div className="cal-scale">
-        <span>Less</span>
+        <span>{t("heatmap.less")}</span>
         {SCALE.map((c) => (
           <span className="cell" key={c} style={{ background: c }} />
         ))}
-        <span>More</span>
+        <span>{t("heatmap.more")}</span>
       </div>
     </div>
   );

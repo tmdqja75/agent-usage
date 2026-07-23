@@ -11,6 +11,7 @@ import {
   LegendValue,
 } from "@/components/charts/legend";
 import { agentColor, agentLabel, CATEGORY_COLORS } from "./names";
+import { getLang, t } from "@/i18n";
 
 export type AgentDatum = { agent: string; tokens: number };
 
@@ -19,7 +20,7 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
 
   const active = data.filter((d) => d.tokens > 0);
   const total = active.reduce((sum, d) => sum + d.tokens, 0);
-  if (total <= 0) return <div className="empty">No agent activity yet.</div>;
+  if (total <= 0) return <div className="empty">{t("state.noAgentActivity")}</div>;
 
   const items = active.map((d, i) => ({
     label: agentLabel(d.agent),
@@ -50,8 +51,11 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
           <Ring key={i} index={i} />
         ))}
         <RingCenter
-          defaultLabel="Total tokens"
-          formatOptions={{ notation: "compact", maximumFractionDigits: 1 }}
+          defaultLabel={t("center.totalTokens")}
+          formatOptions={{
+            notation: "compact",
+            maximumFractionDigits: getLang() === "ko" ? 0 : 1,
+          }}
         />
       </RingChart>
       <Legend items={items} hoveredIndex={hoveredIndex} onHoverChange={setHoveredIndex}>

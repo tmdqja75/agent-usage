@@ -3,6 +3,7 @@
 import NumberFlow from "@number-flow/react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { getLocale } from "@/i18n";
 
 /** Subset of `Intl.NumberFormatOptions` supported by NumberFlow */
 export interface ChartStatFlowFormat {
@@ -31,7 +32,7 @@ function formatStatValue(
   prefix?: string,
   suffix?: string
 ): string {
-  const formatted = new Intl.NumberFormat(undefined, formatOptions).format(
+  const formatted = new Intl.NumberFormat(getLocale(), formatOptions).format(
     value
   );
   return `${prefix ?? ""}${formatted}${suffix ?? ""}`;
@@ -104,6 +105,7 @@ export function ChartStatFlow({
         {numberFlowReady ? (
           <NumberFlow
             format={formatOptions}
+            locales={getLocale()}
             isolate
             prefix={prefix}
             suffix={suffix}

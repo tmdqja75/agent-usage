@@ -139,10 +139,15 @@ def dashboard(
     pie_top_n: int = typer.Option(
         6, "--pie-top-n", help="Max Skills/MCP pie slices before bucketing the rest into 'Other'."
     ),
+    lang: str = typer.Option(
+        "en", "--lang", help="Dashboard UI language: 'en' (default) or 'ko'."
+    ),
 ) -> None:
     """Serve an interactive localhost usage dashboard (local data, or --all-devices)."""
     if pie_top_n < 1:
         raise typer.BadParameter("--pie-top-n must be at least 1")
+    if lang not in ("en", "ko"):
+        raise typer.BadParameter("--lang must be 'en' or 'ko'")
     now = datetime.now(timezone.utc)
     with tempfile.TemporaryDirectory(prefix="agent-usage-dash-") as tmp:
         try:
@@ -153,6 +158,7 @@ def dashboard(
                 port=port,
                 open_browser=not no_open,
                 pie_top_n=pie_top_n,
+                lang=lang,
                 ui_dir=dashboard_command.UI_DIR,
                 force_build=rebuild,
                 today=now.date(),

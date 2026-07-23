@@ -29,6 +29,7 @@ def run(
     port: int,
     open_browser: bool,
     pie_top_n: int,
+    lang: str,
     ui_dir: Path,
     force_build: bool,
     today: date,
@@ -58,4 +59,4 @@ def run(
     except UIBuildError as error:
         raise DashboardError(str(error)) from error
 
-    serve(data, dist_dir=dist_dir, port=port, open_browser=open_browser)
+    serve(data, dist_dir=dist_dir, port=port, open_browser=open_browser, lang=lang)

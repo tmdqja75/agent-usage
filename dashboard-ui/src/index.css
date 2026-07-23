@@ -87,7 +87,18 @@ body { font-family: ui-sans-serif, system-ui, sans-serif; }
 
 .empty { color: var(--muted); font-size: 13px; padding: 24px 0; text-align: center; }
 
+.cal-wrap { position: relative; }
 .cal { display: flex; gap: 3px; overflow-x: auto; }
 .cal .col { display: flex; flex-direction: column; gap: 3px; }
 .cal .cell { width: 11px; height: 11px; border-radius: 2px; }
 .cal-scale { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.cal-tooltip {
+  position: absolute;
+  z-index: 50;
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+  background: var(--chart-tooltip-background, #1c1f26);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}

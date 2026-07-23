@@ -11,6 +11,7 @@ from datetime import date, timedelta
 
 from agent_usage.aggregate import (
     aggregate_records,
+    daily_agent_totals,
     daily_token_totals,
     daily_totals,
     rolling_window,
@@ -60,8 +61,18 @@ def build_dashboard_data(
         for agent in SupportedAgent
     ]
 
+    agent_totals_by_day = daily_agent_totals(valid_payloads)
     heatmap = [
-        {"date": day, "tokens": total}
+        {
+            "date": day,
+            "tokens": total,
+            "byAgent": [
+                {"agent": agent_name, "tokens": agent_total}
+                for agent_name, agent_total in sorted(
+                    agent_totals_by_day.get(day, {}).items(), key=lambda kv: -kv[1]
+                )
+            ],
+        }
         for day, total in sorted(daily_totals(valid_payloads).items())
     ]
 

@@ -78,7 +78,7 @@ See [README.md](README.md) for the user-facing guide.
   rendering — keep those intact.
 - `data.json` contract keys: `window {start,end}`, `tokens [{date,input,output,
   reasoning}]`, `agents [{agent,tokens}]`, `skills [{name,count}]`,
-  `mcp [{name,count}]`, `heatmap [{date,tokens}]`.
+  `mcp [{name,count}]`, `heatmap [{date,tokens,byAgent [{agent,tokens}]}]`.
 - Skills/MCP pies bucket beyond `--pie-top-n` (default 6) into one `Other` entry.
 - bklit gradients (Area fill, ring/pie glows) are the permitted chart-internal
   exception — do not add page/block CSS gradients.

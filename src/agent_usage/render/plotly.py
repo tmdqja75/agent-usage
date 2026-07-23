@@ -13,6 +13,9 @@ from collections.abc import Mapping, Sequence
 import plotly.graph_objects as go
 import plotly.io as pio
 
+from agent_usage.render._counters import OTHER_LABEL as _OTHER_LABEL
+from agent_usage.render._counters import bucket_top_n, rank_usage
+
 CHART_WIDTH = 960
 _TOKEN_CHART_HEIGHT = 300
 
@@ -51,23 +54,6 @@ _AGENT_SERIES = (
 TokenPoint = tuple[str, dict[str, int] | None]
 
 
-def rank_usage(counters: Mapping[str, int]) -> list[tuple[str, int]]:
-    """Return usage counters in the display order used by horizontal charts."""
-    return sorted(counters.items(), key=lambda item: (-item[1], item[0]))
-
-
-_OTHER_LABEL = "Other"
-
-
-def bucket_top_n(ranked: Sequence[tuple[str, int]], top_n: int) -> list[tuple[str, int]]:
-    """Keep the top ``top_n`` ranked entries, summing the rest into one 'Other' entry."""
-    kept = list(ranked[:top_n])
-    overflow = ranked[top_n:]
-    if overflow:
-        kept.append((_OTHER_LABEL, sum(count for _, count in overflow)))
-    return kept
-
-
 def stacked_percentages(totals: Sequence[int]) -> list[int]:
     """Convert raw totals to whole percentages that always sum to exactly 100 (or all 0).
 
@@ -93,16 +79,25 @@ def stacked_percentages(totals: Sequence[int]) -> list[int]:
 
 
 def _base_layout(*, title: str, height: int, width: int = CHART_WIDTH) -> dict:
-    return {
-        "width": width,
-        "height": height,
-        "paper_bgcolor": _BACKGROUND,
-        "plot_bgcolor": _BACKGROUND,
-        "font": {"family": "Arial, sans-serif", "color": _TEXT, "size": 13},
-        "title": {"text": title, "x": 0, "xanchor": "left", "font": {"size": 18}},
-        "margin": {"l": 76, "r": 36, "t": 60, "b": 72},
-    }
-
+    if title:
+        return {
+            "width": width,
+            "height": height,
+            "paper_bgcolor": _BACKGROUND,
+            "plot_bgcolor": _BACKGROUND,
+            "font": {"family": "Arial, sans-serif", "color": _TEXT, "size": 13},
+            "title": {"text": title, "x": 0, "xanchor": "left", "font": {"size": 18}},
+            "margin": {"l": 76, "r": 36, "t": 60, "b": 72},
+        }
+    else:
+        return {
+            "width": width,
+            "height": height,
+            "paper_bgcolor": _BACKGROUND,
+            "plot_bgcolor": _BACKGROUND,
+            "font": {"family": "Arial, sans-serif", "color": _TEXT, "size": 13},
+            "margin": {"l": 76, "r": 36, "t": 60, "b": 72},
+        }
 
 def _to_static_png(figure: go.Figure) -> bytes:
     """Export a high-resolution PNG that can be embedded in a README reliably."""
@@ -233,7 +228,9 @@ def render_agent_share_bar(*, agent_totals: Mapping[str, Mapping[str, int]]) -> 
             showarrow=False,
             font={"size": 16, "color": _AXIS},
         )
-        figure.update_layout(**_base_layout(title="Agent Share", height=_AGENT_BAR_HEIGHT))
+        figure.update_layout(**_base_layout(
+            title=None, 
+            height=_AGENT_BAR_HEIGHT))
         figure.update_xaxes(visible=False, fixedrange=True)
         figure.update_yaxes(visible=False, fixedrange=True)
         return _to_static_png(figure)
@@ -255,7 +252,10 @@ def render_agent_share_bar(*, agent_totals: Mapping[str, Mapping[str, int]]) -> 
             )
         )
     figure.update_layout(
-        **_base_layout(title="Agent Share", height=_AGENT_BAR_HEIGHT),
+        **_base_layout(
+            title=None, 
+            height=_AGENT_BAR_HEIGHT
+        ),
         barmode="stack",
         showlegend=False,
     )

@@ -43,8 +43,18 @@ See [README.md](README.md) for the user-facing guide.
     (stdlib loopback HTTP server), `ui_build.py` (on-demand UI build with caching).
   - `commands/` — one module per CLI command; `cli.py` wires them with Typer.
   - `ledger/`, `publish/`, `privacy.py`, `public_data.py`, `config.py`, `models.py`.
-- `dashboard-ui/` — React + Vite + visx source for the interactive dashboard. Built
-  on demand by `dashboard/ui_build.py`; `node_modules/` and `dist/` are gitignored.
+- `dashboard-ui/` — React + Vite + TypeScript source for the interactive dashboard.
+  Tailwind v4 + shadcn wiring (`components.json`, `src/index.css`, `src/lib/utils.ts`)
+  plus the [bklit](https://ui.bklit.com) chart registry (visx + `motion` +
+  `@number-flow/react`).
+  - `src/components/charts/**` — vendored bklit components (shadcn `add @bklit/*`).
+    Generated; treat as third-party. Chart colors read `--chart-*` tokens from
+    `src/index.css`.
+  - `src/charts/` — thin leaf wrappers that feed `data.json` into bklit:
+    `TokenArea` (AreaChart + tooltip), `AgentRing` (RingChart + Legend),
+    `UsageDonut` (PieChart, Skills + MCP), plus the custom `CalendarHeatmap` and
+    the `names.ts` label/palette map.
+  Built on demand by `dashboard/ui_build.py`; `node_modules/` and `dist/` are gitignored.
 - `tests/` — mirrors the package (`tests/render/`, `tests/dashboard/`, `tests/commands/`).
   Test dirs use no `__init__.py`.
 - `docs/` — privacy boundary, multi-device rules, troubleshooting, plans/specs.
@@ -69,4 +79,14 @@ See [README.md](README.md) for the user-facing guide.
 - `data.json` contract keys: `window {start,end}`, `tokens [{date,input,output,
   reasoning}]`, `agents [{agent,tokens}]`, `skills [{name,count}]`,
   `mcp [{name,count}]`, `heatmap [{date,tokens}]`.
-- Skills/MCP donuts bucket beyond `--pie-top-n` (default 6) into one `Other` entry.
+- Skills/MCP pies bucket beyond `--pie-top-n` (default 6) into one `Other` entry.
+- bklit gradients (Area fill, ring/pie glows) are the permitted chart-internal
+  exception — do not add page/block CSS gradients.
+
+### Adding more bklit components
+
+`pnpm dlx shadcn@latest add @bklit/<name> --yes` (registry configured in
+`components.json`). Node 22 + pnpm 11; `esbuild` is allow-listed in
+`pnpm-workspace.yaml`. The rtk hook mangles `curl` stdout — use `rtk proxy curl`
+or curl to a file when inspecting registry JSON. Verify with `pnpm build` and
+`npx tsc --noEmit` (tsconfig targets ES2022 for bklit's `Array.at`).

@@ -69,6 +69,17 @@ opens your browser. Press Ctrl-C to stop.
 Requirements: Node.js and pnpm (or npm) must be installed to build the UI. The
 build output is a local, gitignored artifact — no bundle is committed.
 
+The charts are [bklit](https://ui.bklit.com) components (built on visx +
+`motion` + `@number-flow/react`) and are interactive:
+
+- **Total token usage** — hover shows an animated date ticker plus a tooltip
+  with Input / Output / Reasoning counts.
+- **Usage by agent** — a ring chart with a side legend; hovering either the ring
+  or a legend row syncs the two and shows that agent's value in the ring center
+  (large totals are compacted, e.g. `20.9M`).
+- **Skills / MCP** — pie charts where hovering pushes a slice out from center and
+  animates its value; the idle center shows the total.
+
 Flags:
 
 - `--all-devices` — aggregate multi-device data by shallow-cloning the
@@ -80,8 +91,8 @@ Flags:
   `Other` (default `6`).
 
 The dashboard renders five blocks: total token usage over the rolling window,
-usage by agent, Skills and MCP usage donuts, and a calendar activity heatmap.
-It fetches `/data.json` from the local server when the page opens.
+usage by agent (ring chart), Skills and MCP usage pies, and a calendar activity
+heatmap. It fetches `/data.json` from the local server when the page opens.
 
 ## What the collector reads
 

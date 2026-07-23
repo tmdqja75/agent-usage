@@ -50,16 +50,21 @@ avoids the interactive path depending on the Plotly/Kaleido rendering module.
 ### 3. Server — `src/agent_usage/dashboard/server.py` (new)
 
 - stdlib `http.server` only (no new runtime Python dependency).
-- Serves the committed `dashboard-ui/dist/` static assets.
-- Serves `/data.json` from the in-memory payload built at startup.
+- Serves the on-demand UI build at `dashboard-ui/dist/` (produced at command
+  start; see UI section).
+- Serves `/data.json` from the in-memory payload built at startup; the browser
+  fetches it when the page opens.
 - Binds `127.0.0.1` (never `0.0.0.0`), `--port` default 8000.
 - Auto-opens the browser via `webbrowser` unless `--no-open`.
 - Runs until Ctrl-C.
 
 ## UI — `dashboard-ui/` (Vite + React + bklit)
 
-Committed to the repo: React **source** and the built **`dist/`**. End users
-running the CLI need no Node; contributors editing charts need Node + pnpm.
+Only the React **source** is committed. Each time `dashboard` runs, the CLI
+builds the UI on demand (cached; rebuilt only when the source is newer than the
+last build, or forced with `--rebuild`) and serves the fresh `dist/`. The build
+output is a gitignored artifact — never committed. Running the command requires
+Node.js + pnpm (or npm) installed.
 
 ### Theme (hard constraints)
 
@@ -124,9 +129,10 @@ agent-usage dashboard [--all-devices] [--port 8000] [--no-open] [--pie-top-n 6]
   clean error when `repo_target` is unset.
 - **Server smoke:** start on an ephemeral port, assert `/` serves `dist`'s
   index and `/data.json` returns the built payload; bind is `127.0.0.1`.
-- **UI `dist/` build is not run in CI** (no Node in the Python CI). The React
-  source is committed; `dist/` is rebuilt and committed by hand when the UI
-  changes.
+- **On-demand build orchestration:** unit-test the staleness check and the
+  install/build subprocess sequence with an injected `run` (no real Node); the
+  actual UI compile is not run in CI. Only the React source is committed; the
+  CLI builds `dist/` on demand at run time.
 
 ## Open risk
 

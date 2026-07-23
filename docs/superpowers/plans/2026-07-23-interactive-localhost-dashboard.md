@@ -4,13 +4,14 @@
 
 **Goal:** Add an `agent-usage dashboard` command that serves an interactive localhost chart dashboard (bklit React charts) from local session data by default, or from multi-device data cloned from the GitHub profile repo with `--all-devices`.
 
-**Architecture:** A pure Python data builder turns validated daily payloads (the same ones the Plotly path uses) into one `data.json`. Two source paths feed it: the local ledger, or a shallow `git clone` of the profile repo. A stdlib `http.server` serves a committed React `dist/` bundle plus the in-memory `data.json`. The existing Plotly PNG dashboard is untouched.
+**Architecture:** A pure Python data builder turns validated daily payloads (the same ones the Plotly path uses) into one `data.json`. Two source paths feed it: the local ledger, or a shallow `git clone` of the profile repo. Each time the `dashboard` command runs it builds the React UI on demand (cached; rebuilt only when the UI source changed), then a stdlib `http.server` serves that fresh build plus the in-memory `data.json`; the browser fetches `/data.json` when the page opens. The existing Plotly PNG dashboard is untouched.
 
 **Tech Stack:** Python 3.11, Typer, stdlib `http.server`/`webbrowser`; React + Vite + bklit (visx) for the UI, built to a committed `dist/`.
 
 ## Global Constraints
 
 - Python floor: `>=3.11`. No new Python runtime dependency (server uses only stdlib).
+- The UI is **built on demand** when `dashboard` runs — never a hand-built, committed bundle. Node.js + pnpm (or npm) must be installed to run the command; the build output (`dashboard-ui/dist/`) is a cached, gitignored artifact, rebuilt only when the UI source is newer.
 - `from __future__ import annotations` at the top of every new Python module (matches repo style).
 - Multi-device data is fetched **only** by shallow `git clone` of `config.repo_target`; never GitHub API.
 - Server binds `127.0.0.1` only (never `0.0.0.0`).
@@ -617,7 +618,7 @@ git commit -m "feat: assemble dashboard payload from local or multi-device data"
 
 ### Task 5: Localhost HTTP server
 
-A stdlib server that serves the committed UI `dist/` directory and injects `/data.json` from the in-memory payload. Binds `127.0.0.1`.
+A stdlib server that serves a UI `dist/` directory (produced on demand by Task 6) and injects `/data.json` from the in-memory payload. Binds `127.0.0.1`.
 
 **Files:**
 - Create: `src/agent_usage/dashboard/server.py`
@@ -778,9 +779,183 @@ git commit -m "feat: add localhost dashboard http server"
 
 ---
 
-### Task 6: CLI command wiring
+### Task 6: On-demand UI build orchestration
 
-Add the `dashboard` Typer command: resolve config, build the payload, locate the committed `dist/`, and serve.
+Build the React UI when the command runs, caching the result and rebuilding only when the UI source is newer than the last build. Returns the servable `dist/` directory. All subprocess calls go through an injectable `run` so the logic is unit-testable without Node.
+
+**Files:**
+- Create: `src/agent_usage/dashboard/ui_build.py`
+- Test: `tests/dashboard/test_ui_build.py`
+
+**Interfaces:**
+- Consumes: stdlib `shutil.which`, `subprocess.run`.
+- Produces: `ensure_build(ui_dir: Path, *, force: bool = False, run=subprocess.run) -> Path` (returns `ui_dir / "dist"`); exception `UIBuildError`.
+
+Semantics:
+- Fresh (not `force`, `dist/index.html` exists and is newer than every UI source file under `src/` plus `package.json`/`vite.config.ts`/`index.html`): return `dist/` without building.
+- Otherwise: pick `pnpm` then `npm` via `shutil.which` (raise `UIBuildError` if neither); run `<pm> install` when `node_modules/` is absent; run `<pm> build`; raise `UIBuildError` on any non-zero exit or if `dist/index.html` is still missing.
+
+- [ ] **Step 1: Write the failing test**
+
+```python
+# tests/dashboard/test_ui_build.py
+from pathlib import Path
+
+import pytest
+
+from agent_usage.dashboard import ui_build
+
+
+def test_ensure_build_skips_when_fresh(tmp_path):
+    (tmp_path / "dist").mkdir()
+    (tmp_path / "dist" / "index.html").write_text("x", encoding="utf-8")
+    calls = []
+
+    result = ui_build.ensure_build(tmp_path, run=lambda *a, **k: calls.append(a))
+
+    assert result == tmp_path / "dist"
+    assert calls == []
+
+
+def test_ensure_build_runs_install_and_build_when_missing(tmp_path, monkeypatch):
+    monkeypatch.setattr(ui_build, "_package_manager", lambda: ["pnpm"])
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "App.tsx").write_text("x", encoding="utf-8")
+    ran = []
+
+    def fake_run(cmd, *, cwd, capture_output, text):
+        ran.append(cmd)
+        if cmd[-1] == "build":
+            dist = Path(cwd) / "dist"
+            dist.mkdir(exist_ok=True)
+            (dist / "index.html").write_text("y", encoding="utf-8")
+
+        class Result:
+            returncode = 0
+            stderr = ""
+
+        return Result()
+
+    result = ui_build.ensure_build(tmp_path, run=fake_run)
+
+    assert (result / "index.html").is_file()
+    assert ["pnpm", "install"] in ran
+    assert ["pnpm", "build"] in ran
+
+
+def test_ensure_build_raises_on_build_failure(tmp_path, monkeypatch):
+    monkeypatch.setattr(ui_build, "_package_manager", lambda: ["npm"])
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "App.tsx").write_text("x", encoding="utf-8")
+
+    def fake_run(cmd, *, cwd, capture_output, text):
+        class Result:
+            returncode = 1
+            stderr = "boom"
+
+        return Result()
+
+    with pytest.raises(ui_build.UIBuildError):
+        ui_build.ensure_build(tmp_path, run=fake_run)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest tests/dashboard/test_ui_build.py -v`
+Expected: FAIL with `ImportError: cannot import name 'ui_build'` (module missing)
+
+- [ ] **Step 3: Implement the build orchestrator**
+
+```python
+# src/agent_usage/dashboard/ui_build.py
+"""Build the React dashboard UI on demand and return the servable dist directory.
+
+Called each time ``agent-usage dashboard`` runs. The build is cached: if
+``dist/index.html`` is newer than every UI source file, it is reused as-is.
+Otherwise the UI is rebuilt with pnpm (or npm). No build artifact is ever
+committed — ``dist/`` is a local, gitignored cache.
+"""
+
+from __future__ import annotations
+
+import shutil
+import subprocess
+from collections.abc import Iterator
+from pathlib import Path
+
+_ROOT_SOURCES = ("package.json", "vite.config.ts", "index.html")
+
+
+class UIBuildError(Exception):
+    """A user-facing failure while building the dashboard UI."""
+
+
+def _package_manager() -> list[str]:
+    for manager in ("pnpm", "npm"):
+        if shutil.which(manager):
+            return [manager]
+    raise UIBuildError(
+        "Node package manager not found — install Node.js and pnpm (or npm) "
+        "to build the dashboard UI"
+    )
+
+
+def _source_files(ui_dir: Path) -> Iterator[Path]:
+    src = ui_dir / "src"
+    if src.is_dir():
+        yield from (path for path in src.rglob("*") if path.is_file())
+    for name in _ROOT_SOURCES:
+        candidate = ui_dir / name
+        if candidate.is_file():
+            yield candidate
+
+
+def _is_stale(ui_dir: Path, dist_dir: Path) -> bool:
+    index = dist_dir / "index.html"
+    if not index.is_file():
+        return True
+    built_at = index.stat().st_mtime
+    return any(source.stat().st_mtime > built_at for source in _source_files(ui_dir))
+
+
+def _run_step(run, command: list[str], cwd: Path) -> None:
+    result = run(command, cwd=str(cwd), capture_output=True, text=True)
+    if result.returncode != 0:
+        raise UIBuildError(f"`{' '.join(command)}` failed:\n{result.stderr}")
+
+
+def ensure_build(ui_dir: Path, *, force: bool = False, run=subprocess.run) -> Path:
+    """Ensure the UI is built and return its dist directory, rebuilding only if needed."""
+    dist_dir = ui_dir / "dist"
+    if not force and not _is_stale(ui_dir, dist_dir):
+        return dist_dir
+    package_manager = _package_manager()
+    if not (ui_dir / "node_modules").is_dir():
+        _run_step(run, [*package_manager, "install"], ui_dir)
+    _run_step(run, [*package_manager, "build"], ui_dir)
+    if not (dist_dir / "index.html").is_file():
+        raise UIBuildError("dashboard UI build did not produce dist/index.html")
+    return dist_dir
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `uv run pytest tests/dashboard/test_ui_build.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/agent_usage/dashboard/ui_build.py tests/dashboard/test_ui_build.py
+git commit -m "feat: build dashboard UI on demand with caching"
+```
+
+---
+
+### Task 7: CLI command wiring
+
+Add the `dashboard` Typer command: resolve config, build the payload, build the UI on demand (Task 6), and serve.
 
 **Files:**
 - Create: `src/agent_usage/commands/dashboard.py`
@@ -788,8 +963,8 @@ Add the `dashboard` Typer command: resolve config, build the payload, locate the
 - Test: `tests/commands/test_dashboard_cli.py` (mirror existing `tests/commands/` layout; add `tests/commands/__init__.py` only if that dir uses one)
 
 **Interfaces:**
-- Consumes: `agent_usage.dashboard.payload.build_payload`; `agent_usage.dashboard.server.serve`; `agent_usage.dashboard.remote.NoRepoTargetError`; `agent_usage.config.{load_config, config_file_path, ledger_file_path}`; `agent_usage.privacy.PrivacyPolicy`.
-- Produces: `commands/dashboard.py::run(*, ledger_path, config_path, all_devices, port, open_browser, pie_top_n, dist_dir, today, tmp_stage_dir) -> None`; a `DIST_DIR` module constant resolving the packaged UI build.
+- Consumes: `agent_usage.dashboard.payload.build_payload`; `agent_usage.dashboard.ui_build.{ensure_build, UIBuildError}`; `agent_usage.dashboard.server.serve`; `agent_usage.dashboard.remote.NoRepoTargetError`; `agent_usage.config.{load_config, config_file_path, ledger_file_path}`; `agent_usage.privacy.PrivacyPolicy`.
+- Produces: `commands/dashboard.py::run(*, ledger_path, config_path, all_devices, port, open_browser, pie_top_n, ui_dir, force_build, today, tmp_stage_dir) -> None`; a `UI_DIR` module constant resolving the repo's `dashboard-ui/` source directory.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -809,9 +984,13 @@ def test_run_builds_payload_and_serves(monkeypatch, tmp_path):
     monkeypatch.setattr(
         dashboard_command, "build_payload", lambda **kwargs: {"served": kwargs["all_devices"]}
     )
+    monkeypatch.setattr(
+        dashboard_command, "ensure_build", lambda ui_dir, *, force: ui_dir / "dist"
+    )
 
     def fake_serve(data, *, dist_dir, port, open_browser):
         calls["data"] = data
+        calls["dist_dir"] = dist_dir
         calls["port"] = port
         calls["open_browser"] = open_browser
 
@@ -824,12 +1003,14 @@ def test_run_builds_payload_and_serves(monkeypatch, tmp_path):
         port=8123,
         open_browser=False,
         pie_top_n=6,
-        dist_dir=tmp_path / "dist",
+        ui_dir=tmp_path / "dashboard-ui",
+        force_build=False,
         today=date(2026, 7, 18),
         tmp_stage_dir=tmp_path / "stage",
     )
 
     assert calls["data"] == {"served": True}
+    assert calls["dist_dir"] == tmp_path / "dashboard-ui" / "dist"
     assert calls["port"] == 8123
     assert calls["open_browser"] is False
 
@@ -839,6 +1020,7 @@ def test_run_reports_missing_repo_target(monkeypatch, tmp_path):
         raise NoRepoTargetError("no repo target set")
 
     monkeypatch.setattr(dashboard_command, "build_payload", boom)
+    monkeypatch.setattr(dashboard_command, "ensure_build", lambda ui_dir, *, force: ui_dir)
     monkeypatch.setattr(dashboard_command, "serve", lambda *a, **k: None)
 
     with pytest.raises(dashboard_command.DashboardError):
@@ -849,7 +1031,8 @@ def test_run_reports_missing_repo_target(monkeypatch, tmp_path):
             port=8000,
             open_browser=False,
             pie_top_n=6,
-            dist_dir=tmp_path / "dist",
+            ui_dir=tmp_path / "dashboard-ui",
+            force_build=False,
             today=date(2026, 7, 18),
             tmp_stage_dir=tmp_path / "stage",
         )
@@ -875,10 +1058,12 @@ from agent_usage.config import load_config
 from agent_usage.dashboard.payload import build_payload
 from agent_usage.dashboard.remote import NoRepoTargetError
 from agent_usage.dashboard.server import serve
+from agent_usage.dashboard.ui_build import UIBuildError, ensure_build
 from agent_usage.privacy import PrivacyPolicy
 
-# The committed UI build ships inside the package at src/agent_usage/dashboard/dist.
-DIST_DIR = Path(__file__).resolve().parent.parent / "dashboard" / "dist"
+# The React UI source lives at the repo root under dashboard-ui/.
+# commands/dashboard.py -> commands -> agent_usage -> src -> <repo root>.
+UI_DIR = Path(__file__).resolve().parents[3] / "dashboard-ui"
 
 
 class DashboardError(Exception):
@@ -893,11 +1078,12 @@ def run(
     port: int,
     open_browser: bool,
     pie_top_n: int,
-    dist_dir: Path,
+    ui_dir: Path,
+    force_build: bool,
     today: date,
     tmp_stage_dir: Path,
 ) -> None:
-    """Build the dashboard payload and serve it until interrupted."""
+    """Build the payload, build the UI on demand, and serve until interrupted."""
     config = load_config(config_path)
     try:
         data = build_payload(
@@ -911,6 +1097,16 @@ def run(
         )
     except NoRepoTargetError as error:
         raise DashboardError(str(error)) from error
+
+    if not ui_dir.is_dir():
+        raise DashboardError(
+            f"dashboard UI source not found at {ui_dir} — run from a repository checkout"
+        )
+    try:
+        dist_dir = ensure_build(ui_dir, force=force_build)
+    except UIBuildError as error:
+        raise DashboardError(str(error)) from error
+
     serve(data, dist_dir=dist_dir, port=port, open_browser=open_browser)
 ```
 
@@ -937,6 +1133,9 @@ def dashboard(
     ),
     port: int = typer.Option(8000, "--port", help="Localhost port to serve on."),
     no_open: bool = typer.Option(False, "--no-open", help="Do not open a browser automatically."),
+    rebuild: bool = typer.Option(
+        False, "--rebuild", help="Force a fresh UI build even if the cached build looks current."
+    ),
     pie_top_n: int = typer.Option(
         6, "--pie-top-n", help="Max Skills/MCP pie slices before bucketing the rest into 'Other'."
     ),
@@ -954,7 +1153,8 @@ def dashboard(
                 port=port,
                 open_browser=not no_open,
                 pie_top_n=pie_top_n,
-                dist_dir=dashboard_command.DIST_DIR,
+                ui_dir=dashboard_command.UI_DIR,
+                force_build=rebuild,
                 today=now.date(),
                 tmp_stage_dir=Path(tmp),
             )
@@ -979,22 +1179,20 @@ git commit -m "feat: add agent-usage dashboard command"
 
 ---
 
-### Task 7: React + bklit UI, built to a committed `dist/`
+### Task 8: React + bklit UI source (built on demand)
 
-Scaffold the Vite + React + bklit app under `dashboard-ui/`, implement the five chart blocks against the `data.json` contract in the required dark theme, build it, and copy the build into the package at `src/agent_usage/dashboard/dist/` so the CLI serves it with no Node at runtime.
+Scaffold the Vite + React + bklit app under `dashboard-ui/` and implement the five chart blocks against the `data.json` contract in the required dark theme. Do **not** build or commit a `dist/` — Task 6's `ensure_build` compiles it on demand when the command runs, and `dashboard-ui/dist/` stays gitignored.
 
-This task is not Python-TDD; verification is manual (build succeeds, `agent-usage dashboard` renders). Do not run a Node build in CI.
+This task is not Python-TDD; verification is manual (`agent-usage dashboard` builds the UI and renders). Do not run a Node build in CI.
 
 **Files:**
 - Create: `dashboard-ui/` (Vite React scaffold: `package.json`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/theme.css`, chart components under `src/charts/`)
-- Create: `dashboard-ui/README.md` (how to build + where the output must be copied)
-- Create (committed build output): `src/agent_usage/dashboard/dist/**`
-- Modify: `pyproject.toml` (ensure the packaged `dist/` ships — see Step 6)
-- Modify: `.gitignore` (ignore `dashboard-ui/node_modules`, but NOT `src/agent_usage/dashboard/dist`)
+- Create: `dashboard-ui/README.md` (how to develop the UI; note the CLI builds it automatically)
+- Modify: `.gitignore` (ignore `dashboard-ui/node_modules/` and `dashboard-ui/dist/`)
 
 **Interfaces:**
 - Consumes: `GET /data.json` matching the Global Constraints contract.
-- Produces: static assets whose entry is `index.html` at the root of `src/agent_usage/dashboard/dist/`.
+- Produces: buildable UI source whose `pnpm build` (or `npm run build`) emits `dashboard-ui/dist/index.html` — the directory Task 6 returns and Task 5 serves.
 
 - [ ] **Step 1: Scaffold the Vite React + TypeScript app**
 
@@ -1113,39 +1311,40 @@ Implement each chart component under `dashboard-ui/src/charts/` using the corres
 - `UsageDonut`: pie-chart with an inner radius (donut) over `{name, count}`.
 - `CalendarHeatmap`: GitHub-contributions calendar over `{date, tokens}` (X=weeks, Y=day-of-week, grayscale Less→More).
 
-- [ ] **Step 5: Build and copy into the package**
+- [ ] **Step 5: Ignore build artifacts (do not commit `dist/`)**
+
+In `.gitignore`, add:
+
+```gitignore
+dashboard-ui/node_modules/
+dashboard-ui/dist/
+```
+
+No `dist/` is committed and no `pyproject.toml` packaging change is needed — the CLI builds `dashboard-ui/dist/` on demand at run time and serves it from the checkout.
+
+- [ ] **Step 6: Verify the on-demand build produces `dist/index.html`**
 
 ```bash
 cd dashboard-ui
-pnpm build          # emits dashboard-ui/dist/
-rm -rf ../src/agent_usage/dashboard/dist
-cp -R dist ../src/agent_usage/dashboard/dist
+pnpm install
+pnpm build          # emits dashboard-ui/dist/index.html
+ls dist/index.html
 ```
 
-- [ ] **Step 6: Ensure the packaged `dist/` ships and is not ignored**
+This confirms the source compiles. The CLI (Task 6's `ensure_build`) runs these same steps automatically; this manual run just validates the scaffold once.
 
-In `.gitignore`, add `dashboard-ui/node_modules/` and `dashboard-ui/dist/` (the UI-local build), but make sure `src/agent_usage/dashboard/dist/` is NOT ignored (it is the committed, served copy).
-
-In `pyproject.toml`, confirm the hatchling build includes the package data. Since the source layout is `src/`, add if missing:
-
-```toml
-[tool.hatch.build.targets.wheel]
-packages = ["src/agent_usage"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/agent_usage/dashboard/dist" = "agent_usage/dashboard/dist"
-```
-
-- [ ] **Step 7: Manual verification**
+- [ ] **Step 7: Manual verification through the CLI (on-demand build path)**
 
 ```bash
+rm -rf dashboard-ui/dist          # prove the CLI builds from scratch
 uv run agent-usage collect        # ensure some local data exists
 uv run agent-usage dashboard --no-open --port 8000
+# The command should build the UI (pnpm install/build) then start serving.
 # In another shell:
 curl -s http://127.0.0.1:8000/data.json | head -c 200
-# Open http://127.0.0.1:8000 in a browser: confirm 5 blocks render,
-# page bg is #090A0B, blocks are #0E0F13, and no gradient backgrounds appear
-# (only bklit's own in-chart gradients).
+# Open http://127.0.0.1:8000 in a browser: confirm the charts load after the
+# page fetches /data.json, all 5 blocks render, page bg is #090A0B, blocks are
+# #0E0F13, and no gradient backgrounds appear (only bklit's own in-chart gradients).
 ```
 
 Then verify multi-device:
@@ -1157,14 +1356,14 @@ uv run agent-usage dashboard --all-devices --no-open
 - [ ] **Step 8: Commit**
 
 ```bash
-git add dashboard-ui src/agent_usage/dashboard/dist pyproject.toml .gitignore
-git commit -m "feat: add React + bklit interactive dashboard UI and committed build"
+git add dashboard-ui .gitignore
+git commit -m "feat: add React + bklit interactive dashboard UI (built on demand)"
 ```
 
 ---
 
 ## Self-Review Notes
 
-- **Spec coverage:** local default (Tasks 4, 6) · `--all-devices` git clone (Tasks 3, 4) · data.json contract (Task 2) · localhost server binding loopback (Task 5) · CLI flags `--all-devices/--port/--no-open/--pie-top-n` (Task 6) · 5 chart blocks + theme + no-gradient rule (Task 7) · Plotly path untouched (Task 1 re-exports) · lifetime vs rolling-window semantics (Task 2). All covered.
-- **Heatmap open risk** (spec) is carried into Task 7 Step 2 with a concrete fallback.
-- **Type consistency:** `build_dashboard_data`, `build_payload`, `fetch_device_entries`, `shallow_clone`, `make_server`/`serve`, `run`/`DIST_DIR`/`DashboardError` names are used identically across producing and consuming tasks.
+- **Spec coverage:** local default (Tasks 4, 7) · `--all-devices` git clone (Tasks 3, 4) · data.json contract (Task 2) · localhost server binding loopback (Task 5) · on-demand UI build, no committed bundle (Tasks 6, 8) · client fetches `/data.json` on page open (Task 8 `App.tsx`) · CLI flags `--all-devices/--port/--no-open/--rebuild/--pie-top-n` (Task 7) · 5 chart blocks + theme + no-gradient rule (Task 8) · Plotly path untouched (Task 1 re-exports) · lifetime vs rolling-window semantics (Task 2). All covered.
+- **Heatmap open risk** (spec) is carried into Task 8 Step 2 with a concrete fallback.
+- **Type consistency:** `build_dashboard_data`, `build_payload`, `fetch_device_entries`, `shallow_clone`, `make_server`/`serve`, `ensure_build`/`UIBuildError`, `run`/`UI_DIR`/`DashboardError` names are used identically across producing and consuming tasks.

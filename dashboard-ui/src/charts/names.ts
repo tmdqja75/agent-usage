@@ -8,6 +8,16 @@ export function agentLabel(agent: string): string {
   return AGENT_NAMES[agent] ?? agent;
 }
 
+export const AGENT_COLORS: Record<string, string> = {
+  hermes_agent: "#FFFFFF",
+  claude_code: "#EB643D",
+  codex: "#6074F1",
+};
+
+export function agentColor(agent: string, fallback: string): string {
+  return AGENT_COLORS[agent] ?? fallback;
+}
+
 // Flat categorical palette (no gradients).
 export const SERIES_COLORS = {
   input: "#60A5FA",

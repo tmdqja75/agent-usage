@@ -92,6 +92,7 @@ body { font-family: ui-sans-serif, system-ui, sans-serif; }
 .cal .col { display: flex; flex-direction: column; gap: 3px; }
 .cal .cell { width: 11px; height: 11px; border-radius: 2px; }
 .cal-scale { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.cal-scale .cell { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
 .cal-tooltip {
   position: absolute;
   z-index: 50;

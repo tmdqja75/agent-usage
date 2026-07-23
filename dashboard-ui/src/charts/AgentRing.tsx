@@ -10,7 +10,7 @@ import {
   LegendProgress,
   LegendValue,
 } from "@/components/charts/legend";
-import { agentLabel, CATEGORY_COLORS } from "./names";
+import { agentColor, agentLabel, CATEGORY_COLORS } from "./names";
 
 export type AgentDatum = { agent: string; tokens: number };
 
@@ -25,7 +25,7 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
     label: agentLabel(d.agent),
     value: d.tokens,
     maxValue: total,
-    color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+    color: agentColor(d.agent, CATEGORY_COLORS[i % CATEGORY_COLORS.length]),
   }));
 
   return (
@@ -41,7 +41,8 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
     >
       <RingChart
         data={items}
-        size={200}
+        size={280}
+        strokeWidth={20}
         hoveredIndex={hoveredIndex}
         onHoverChange={setHoveredIndex}
       >

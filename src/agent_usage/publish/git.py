@@ -160,3 +160,20 @@ def publish_device_partition(
     raise GitCommandError(
         ("push",), 1, f"exceeded {max_retries} retries without a fast-forward push"
     )
+
+
+def shallow_clone(repo_url: str, dest: Path, *, branch: str = "main") -> Path:
+    """Depth-1 single-branch clone of ``repo_url`` into a fresh ``dest`` directory."""
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    _run(
+        "clone",
+        "--depth",
+        "1",
+        "--branch",
+        branch,
+        "--single-branch",
+        repo_url,
+        str(dest),
+        cwd=dest.parent,
+    )
+    return dest

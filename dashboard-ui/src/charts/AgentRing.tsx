@@ -32,9 +32,11 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
-        gap: 16,
+        flexDirection: "row",
+        gap: 32,
         alignItems: "center",
+        justifyContent: "center",
+        flexWrap: "wrap",
       }}
     >
       <RingChart

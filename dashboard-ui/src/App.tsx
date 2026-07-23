@@ -3,6 +3,8 @@ import { AgentRing } from "./charts/AgentRing";
 import { CalendarHeatmap } from "./charts/CalendarHeatmap";
 import { TokenArea } from "./charts/TokenArea";
 import { UsageDonut } from "./charts/UsageDonut";
+import { parseISODate, windowDateFmt } from "@/components/charts/chart-formatters";
+import { t } from "./i18n";
 
 type Data = {
   window: { start: string; end: string };
@@ -24,36 +26,37 @@ export default function App() {
       .catch((e) => setError(String(e)));
   }, []);
 
-  if (error) return <div className="dashboard empty">Failed to load data: {error}</div>;
-  if (!data) return <div className="dashboard empty">Loading…</div>;
+  if (error) return <div className="dashboard empty">{t("state.error")} {error}</div>;
+  if (!data) return <div className="dashboard empty">{t("state.loading")}</div>;
 
   return (
     <div className="dashboard">
       <section className="block">
         <h2>
-          Total Token Usage{" "}
+          {t("title.tokenUsage")}{" "}
           <span className="window">
-            {data.window.start} → {data.window.end}
+            {windowDateFmt.format(parseISODate(data.window.start))} →{" "}
+            {windowDateFmt.format(parseISODate(data.window.end))}
           </span>
         </h2>
         <TokenArea data={data.tokens} />
       </section>
       <section className="block">
-        <h2>Usage by Agent</h2>
+        <h2>{t("title.usageByAgent")}</h2>
         <AgentRing data={data.agents} />
       </section>
       <div className="row-two">
         <section className="block">
-          <h2>Skill Usage</h2>
+          <h2>{t("title.skillUsage")}</h2>
           <UsageDonut data={data.skills} />
         </section>
         <section className="block">
-          <h2>MCP Usage</h2>
+          <h2>{t("title.mcpUsage")}</h2>
           <UsageDonut data={data.mcp} />
         </section>
       </div>
       <section className="block">
-        <h2>Activity</h2>
+        <h2>{t("title.activity")}</h2>
         <CalendarHeatmap data={data.heatmap} />
       </section>
     </div>

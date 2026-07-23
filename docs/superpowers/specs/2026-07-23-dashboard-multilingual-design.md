@@ -60,7 +60,15 @@ New `dashboard-ui/src/i18n.ts`:
 | `state.loading` | Loading… | 불러오는 중… | App.tsx |
 | `state.error` | Failed to load data: | 데이터를 불러오지 못했습니다: | App.tsx |
 | `state.noData` | No data yet. | 아직 데이터가 없습니다. | UsageDonut.tsx |
+| `state.noTokenActivity` | No token activity in this window. | 이 기간에 토큰 활동이 없습니다. | TokenArea.tsx |
+| `state.noAgentActivity` | No agent activity yet. | 아직 에이전트 활동이 없습니다. | AgentRing.tsx |
+| `state.noActivity` | No activity recorded yet. | 아직 기록된 활동이 없습니다. | CalendarHeatmap.tsx |
+| `heatmap.tokens` | Tokens | 토큰 | CalendarHeatmap.tsx (single-day tooltip fallback label) |
 | `bucket.other` | Other | 기타 | server-generated bucket label (see exception below) |
+
+The per-day calendar tooltip title (`hover.datum.date`, a raw `YYYY-MM-DD`
+string) is left unformatted in both languages — it's an unambiguous ISO date,
+not natural-language text, so localizing it adds no clarity.
 
 ### Untranslated (kept as raw data)
 

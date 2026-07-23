@@ -4,6 +4,7 @@ import { XAxis } from "@/components/charts/x-axis";
 import { YAxis } from "@/components/charts/y-axis";
 import { ChartTooltip } from "@/components/charts/tooltip";
 import { SERIES_COLORS } from "./names";
+import { t } from "@/i18n";
 
 export type TokenPoint = {
   date: string;
@@ -13,7 +14,7 @@ export type TokenPoint = {
 };
 
 export function TokenArea({ data }: { data: TokenPoint[] }) {
-  if (data.length === 0) return <div className="empty">No token activity in this window.</div>;
+  if (data.length === 0) return <div className="empty">{t("state.noTokenActivity")}</div>;
 
   return (
     <>
@@ -27,9 +28,13 @@ export function TokenArea({ data }: { data: TokenPoint[] }) {
         <ChartTooltip
           showDatePill
           rows={(p) => [
-            { label: "Input", value: p.input as number, color: SERIES_COLORS.input },
-            { label: "Output", value: p.output as number, color: SERIES_COLORS.output },
-            { label: "Reasoning", value: p.reasoning as number, color: SERIES_COLORS.reasoning },
+            { label: t("legend.input"), value: p.input as number, color: SERIES_COLORS.input },
+            { label: t("legend.output"), value: p.output as number, color: SERIES_COLORS.output },
+            {
+              label: t("legend.reasoning"),
+              value: p.reasoning as number,
+              color: SERIES_COLORS.reasoning,
+            },
           ]}
         />
       </AreaChart>
@@ -37,7 +42,7 @@ export function TokenArea({ data }: { data: TokenPoint[] }) {
         {(["input", "output", "reasoning"] as const).map((k) => (
           <span className="item" key={k}>
             <span className="swatch" style={{ background: SERIES_COLORS[k] }} />
-            {k}
+            {t(`legend.${k}`)}
           </span>
         ))}
       </div>

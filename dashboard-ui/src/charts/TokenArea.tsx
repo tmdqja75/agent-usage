@@ -1,6 +1,7 @@
 import { AreaChart, Area } from "@/components/charts/area-chart";
 import { Grid } from "@/components/charts/grid";
 import { XAxis } from "@/components/charts/x-axis";
+import { YAxis } from "@/components/charts/y-axis";
 import { ChartTooltip } from "@/components/charts/tooltip";
 import { SERIES_COLORS } from "./names";
 
@@ -16,11 +17,12 @@ export function TokenArea({ data }: { data: TokenPoint[] }) {
 
   return (
     <>
-      <AreaChart data={data} xDataKey="date" aspectRatio="3 / 1">
+      <AreaChart data={data} xDataKey="date" aspectRatio="3 / 1" margin={{ left: 50 }}>
         <Grid horizontal />
         <Area dataKey="input" fill={SERIES_COLORS.input} />
         <Area dataKey="output" fill={SERIES_COLORS.output} />
         <Area dataKey="reasoning" fill={SERIES_COLORS.reasoning} />
+        <YAxis formatLargeNumbers />
         <XAxis />
         <ChartTooltip
           showDatePill

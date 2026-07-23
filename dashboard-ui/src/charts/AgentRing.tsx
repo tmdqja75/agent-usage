@@ -29,7 +29,14 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
   }));
 
   return (
-    <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        alignItems: "center",
+      }}
+    >
       <RingChart
         data={items}
         size={200}
@@ -39,7 +46,10 @@ export function AgentRing({ data }: { data: AgentDatum[] }) {
         {items.map((_, i) => (
           <Ring key={i} index={i} />
         ))}
-        <RingCenter defaultLabel="Total tokens" />
+        <RingCenter
+          defaultLabel="Total tokens"
+          formatOptions={{ notation: "compact", maximumFractionDigits: 1 }}
+        />
       </RingChart>
       <Legend items={items} hoveredIndex={hoveredIndex} onHoverChange={setHoveredIndex}>
         <LegendItem>

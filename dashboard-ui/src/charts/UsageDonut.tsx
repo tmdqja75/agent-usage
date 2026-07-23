@@ -11,8 +11,13 @@ import {
   LegendValue,
 } from "@/components/charts/legend";
 import { CATEGORY_COLORS } from "./names";
+import { t } from "@/i18n";
 
 export type UsageDatum = { name: string; count: number };
+
+// Matches OTHER_LABEL in src/agent_usage/render/_counters.py — a
+// server-synthesized bucket, not a real skill/MCP name, so it's translated.
+const OTHER_LABEL = "Other";
 
 export function UsageDonut({ data }: { data: UsageDatum[] }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -20,10 +25,10 @@ export function UsageDonut({ data }: { data: UsageDatum[] }) {
 
   const active = data.filter((d) => d.count > 0);
   const total = active.reduce((sum, d) => sum + d.count, 0);
-  if (total <= 0) return <div className="empty">No data yet.</div>;
+  if (total <= 0) return <div className="empty">{t("state.noData")}</div>;
 
   const slices = active.map((d, i) => ({
-    label: d.name,
+    label: d.name === OTHER_LABEL ? t("bucket.other") : d.name,
     value: d.count,
     maxValue: total,
     color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
@@ -60,7 +65,7 @@ export function UsageDonut({ data }: { data: UsageDatum[] }) {
           {slices.map((_, i) => (
             <PieSlice key={i} index={i} />
           ))}
-          <PieCenter defaultLabel="Total" />
+          <PieCenter defaultLabel={t("center.total")} />
         </PieChart>
         {hovered && hoverPos && (
           <div

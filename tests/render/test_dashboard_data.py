@@ -76,6 +76,18 @@ def test_build_dashboard_data_shapes_every_section():
     ]
 
 
+def test_build_dashboard_data_tokens_are_not_truncated_past_window_days():
+    payloads = [
+        _payload("2026-06-01", claude=_agent(input_=1, output=1, reasoning=0, headline=2)),
+        _payload("2026-07-11", claude=_agent(input_=2, output=2, reasoning=0, headline=4)),
+    ]
+
+    data = build_dashboard_data(payloads, today=date(2026, 7, 11), window_days=14)
+
+    assert data["window"] == {"start": "2026-06-01", "end": "2026-07-11"}
+    assert [entry["date"] for entry in data["tokens"]] == ["2026-06-01", "2026-07-11"]
+
+
 def test_build_dashboard_data_empty_uses_window_fallback():
     data = build_dashboard_data([], today=date(2026, 7, 18), window_days=14)
     assert data["window"] == {"start": "2026-07-05", "end": "2026-07-18"}

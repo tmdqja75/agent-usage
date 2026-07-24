@@ -14,7 +14,6 @@ from agent_usage.aggregate import (
     daily_agent_totals,
     daily_token_totals,
     daily_totals,
-    rolling_window,
 )
 from agent_usage.models import SupportedAgent
 from agent_usage.render._counters import bucket_top_n, rank_usage
@@ -35,8 +34,7 @@ def build_dashboard_data(
     pie_top_n: int = 6,
 ) -> dict:
     """Reshape validated daily payloads into the dashboard's data.json contract."""
-    windowed = rolling_window(valid_payloads, end=today, days=window_days)
-    token_by_date = daily_token_totals(windowed)
+    token_by_date = daily_token_totals(valid_payloads)
 
     tokens = [
         {

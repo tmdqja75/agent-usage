@@ -66,6 +66,8 @@ See [README.md](README.md) for the user-facing guide.
 
 ## Conventions
 
+- Whenever a new function/feature is added or a bug is fixed, update
+  README.md and AGENTS.md to reflect it in the same change.
 - Every new Python module starts with `from __future__ import annotations`.
 - Match the surrounding code's style, naming, and comment density.
 - TDD: write a failing test first, then implement. Commit per logical unit.

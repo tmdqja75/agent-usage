@@ -6,10 +6,10 @@ from datetime import datetime, timezone
 
 from codex_sessions import token_count_event, write_rollout
 
-from agent_usage.commands.doctor import run_doctor
-from agent_usage.config import AppConfig, save_config
-from agent_usage.ledger.repository import LedgerRepository
-from agent_usage.models import SourceStatus, SupportedAgent
+from tomax.commands.doctor import run_doctor
+from tomax.config import AppConfig, save_config
+from tomax.ledger.repository import LedgerRepository
+from tomax.models import SourceStatus, SupportedAgent
 
 UTC = timezone.utc
 NOW = datetime(2026, 7, 10, 12, 0, tzinfo=UTC)

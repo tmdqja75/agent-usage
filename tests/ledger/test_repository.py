@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from agent_usage.ledger.repository import LedgerRepository
-from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
+from tomax.ledger.repository import LedgerRepository
+from tomax.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
 
 
 UTC = timezone.utc

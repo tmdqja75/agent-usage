@@ -17,9 +17,9 @@ from claude_code_projects import (
     write_transcript,
 )
 
-from agent_usage.adapters import claude_code
-from agent_usage.models import SourceStatus, SupportedAgent
-from agent_usage.time_window import TimeWindow
+from tomax.adapters import claude_code
+from tomax.models import SourceStatus, SupportedAgent
+from tomax.time_window import TimeWindow
 
 UTC = timezone.utc
 

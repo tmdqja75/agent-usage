@@ -2,8 +2,8 @@ from datetime import date
 
 import pytest
 
-from agent_usage.commands import dashboard as dashboard_command
-from agent_usage.dashboard.remote import NoRepoTargetError
+from tomax.commands import dashboard as dashboard_command
+from tomax.dashboard.remote import NoRepoTargetError
 
 
 def test_run_builds_payload_and_serves(monkeypatch, tmp_path):

@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from agent_usage.commands import render as render_command
-from agent_usage.commands.render import render
-from agent_usage.ledger.repository import LedgerRepository
-from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
+from tomax.commands import render as render_command
+from tomax.commands.render import render
+from tomax.ledger.repository import LedgerRepository
+from tomax.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
 
 UTC = timezone.utc
 TODAY = date(2026, 7, 18)
@@ -61,9 +61,9 @@ def test_render_writes_a_readme_and_dashboard_screenshot(tmp_path, monkeypatch) 
     assert result.changed is True
     assert result.readme_path.exists()
     readme = result.readme_path.read_text(encoding="utf-8")
-    assert "agent-usage:start" in readme
-    assert "assets/agent-usage/dashboard.png" in readme
-    assert (output_dir / "assets" / "agent-usage" / "dashboard.png").exists()
+    assert "tomax:start" in readme
+    assert "assets/tomax/dashboard.png" in readme
+    assert (output_dir / "assets" / "tomax" / "dashboard.png").exists()
 
 
 def test_render_honors_a_custom_pie_top_n(tmp_path, monkeypatch) -> None:

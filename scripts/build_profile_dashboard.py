@@ -12,7 +12,7 @@ never blocks everyone else's dashboard. Diagnostics only ever include the
 device id, date, and rejection reason already carried by
 ``ValidationIssue`` — never record content.
 
-Not part of the installable ``agent_usage`` package: it is meant to be
+Not part of the installable ``tomax`` package: it is meant to be
 checked out from this repo and invoked directly in the profile repo's CI,
 per the workflow template.
 """
@@ -25,11 +25,11 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from agent_usage.aggregate import validate_and_partition
-from agent_usage.dashboard.export import screenshot_payload
-from agent_usage.dashboard.ui_build import ensure_build
-from agent_usage.render.dashboard_data import build_dashboard_data
-from agent_usage.render.markdown import (
+from tomax.aggregate import validate_and_partition
+from tomax.dashboard.export import screenshot_payload
+from tomax.dashboard.ui_build import ensure_build
+from tomax.render.dashboard_data import build_dashboard_data
+from tomax.render.markdown import (
     DASHBOARD_IMAGE_PATH,
     render_dashboard_markdown,
     update_readme,
@@ -38,7 +38,7 @@ from agent_usage.render.markdown import (
 DEFAULT_DATA_DIR = Path("data/v1/devices")
 DEFAULT_README = Path("README.md")
 DEFAULT_DASHBOARD_PNG = Path(DASHBOARD_IMAGE_PATH)
-DEFAULT_UI_DIR = Path(".agent-usage-src/dashboard-ui")
+DEFAULT_UI_DIR = Path(".tomax-src/dashboard-ui")
 
 
 def _load_entries(data_dir: Path) -> list[tuple[str, object]]:
@@ -102,7 +102,7 @@ def build(
     partition = validate_and_partition(entries, today=today)
     for issue in partition.issues:
         print(
-            f"agent-usage: skipping invalid record "
+            f"tomax: skipping invalid record "
             f"device={issue.device_id} date={issue.date} reason={issue.reason}",
             file=sys.stderr,
         )
@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
         generated_at=generated_at,
         pie_top_n=args.pie_top_n,
     )
-    print("agent-usage: dashboard changed" if changed else "agent-usage: dashboard unchanged")
+    print("tomax: dashboard changed" if changed else "tomax: dashboard unchanged")
     return 0
 
 

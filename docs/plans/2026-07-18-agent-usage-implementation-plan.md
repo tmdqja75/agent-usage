@@ -90,8 +90,8 @@ Render only static Markdown and relative SVG assets. Include:
 Use stable managed markers:
 
 ```html
-<!-- agent-usage:start -->
-<!-- agent-usage:end -->
+<!-- tomax:start -->
+<!-- tomax:end -->
 ```
 
 Preserve all README text outside those markers.
@@ -111,16 +111,16 @@ Preserve all README text outside those markers.
 **Create**
 
 - `pyproject.toml`
-- `src/agent_usage/__init__.py`
-- `src/agent_usage/cli.py`
+- `src/tomax/__init__.py`
+- `src/tomax/cli.py`
 - `tests/test_smoke.py`
 - `README.md`, `LICENSE`, `.gitignore`
 
 **Steps**
 
-1. Configure Python `>=3.11`, `src/` layout, and `agent-usage` console entry point.
+1. Configure Python `>=3.11`, `src/` layout, and `tomax` console entry point.
 2. Add `pytest` and `ruff` development tooling.
-3. Write a failing `agent-usage --help` smoke test.
+3. Write a failing `tomax --help` smoke test.
 4. Implement the minimum Typer command group.
 5. Verify with `uv run pytest tests/test_smoke.py -q` and `uv run ruff check .`.
 6. Commit `chore: scaffold agent usage cli`.
@@ -129,8 +129,8 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/models.py`
-- `src/agent_usage/time_window.py`
+- `src/tomax/models.py`
+- `src/tomax/time_window.py`
 - `tests/test_models.py`
 - `tests/test_time_window.py`
 
@@ -147,8 +147,8 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/ledger/schema.py`
-- `src/agent_usage/ledger/repository.py`
+- `src/tomax/ledger/schema.py`
+- `src/tomax/ledger/repository.py`
 - `tests/ledger/test_repository.py`
 
 **Steps**
@@ -163,7 +163,7 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/config.py`
+- `src/tomax/config.py`
 - `tests/test_config.py`
 
 **Steps**
@@ -180,8 +180,8 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/adapters/base.py`
-- `src/agent_usage/adapters/hermes.py`
+- `src/tomax/adapters/base.py`
+- `src/tomax/adapters/hermes.py`
 - `tests/adapters/test_hermes.py`
 - `tests/fixtures/hermes_state.db`
 
@@ -196,7 +196,7 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/adapters/claude_code.py`
+- `src/tomax/adapters/claude_code.py`
 - `tests/adapters/test_claude_code.py`
 - `tests/fixtures/claude_projects/`
 
@@ -212,7 +212,7 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/adapters/codex.py`
+- `src/tomax/adapters/codex.py`
 - `tests/adapters/test_codex.py`
 - `tests/fixtures/codex_sessions/`
 
@@ -230,7 +230,7 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/privacy.py`
+- `src/tomax/privacy.py`
 - `tests/test_privacy.py`
 
 **Steps**
@@ -245,7 +245,7 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/public_data.py`
+- `src/tomax/public_data.py`
 - `tests/test_public_data.py`
 
 **Steps**
@@ -260,7 +260,7 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/aggregate.py`
+- `src/tomax/aggregate.py`
 - `tests/test_aggregate.py`
 
 **Steps**
@@ -277,8 +277,8 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/render/markdown.py`
-- `src/agent_usage/render/svg.py`
+- `src/tomax/render/markdown.py`
+- `src/tomax/render/svg.py`
 - `templates/profile-readme.md`
 - `tests/render/test_markdown.py`
 - `tests/render/test_svg.py`
@@ -286,7 +286,7 @@ Preserve all README text outside those markers.
 **Steps**
 
 1. Render source health, rolling/lifetime metrics, agent table, and skill/MCP leaderboards.
-2. Generate `assets/agent-usage/rolling-14d.svg` and `assets/agent-usage/lifetime.svg`.
+2. Generate `assets/tomax/rolling-14d.svg` and `assets/tomax/lifetime.svg`.
 3. Test valid Markdown, idempotent markers, deterministic SVG, and activity/zero/unavailable states.
 4. Commit `feat: render README dashboard and charts`.
 
@@ -312,20 +312,20 @@ Preserve all README text outside those markers.
 
 **Create**
 
-- `src/agent_usage/commands/init.py`
-- `src/agent_usage/commands/collect.py`
-- `src/agent_usage/commands/render.py`
-- `src/agent_usage/commands/doctor.py`
+- `src/tomax/commands/init.py`
+- `src/tomax/commands/collect.py`
+- `src/tomax/commands/render.py`
+- `src/tomax/commands/doctor.py`
 - `tests/commands/`
 
 **Commands**
 
 ```bash
-agent-usage init --repo OWNER/PROFILE-REPO
-agent-usage doctor
-agent-usage collect
-agent-usage render
-agent-usage collect --dry-run
+tomax init --repo OWNER/PROFILE-REPO
+tomax doctor
+tomax collect
+tomax render
+tomax collect --dry-run
 ```
 
 Test that unavailable and zero sources differ and dry-run has no side effects. Commit `feat: add collection and diagnostics commands`.
@@ -334,8 +334,8 @@ Test that unavailable and zero sources differ and dry-run has no side effects. C
 
 **Create**
 
-- `src/agent_usage/publish/git.py`
-- `src/agent_usage/commands/publish.py`
+- `src/tomax/publish/git.py`
+- `src/tomax/commands/publish.py`
 - `tests/publish/test_git.py`
 
 **Steps**
@@ -350,16 +350,16 @@ Test that unavailable and zero sources differ and dry-run has no side effects. C
 
 **Create**
 
-- `src/agent_usage/schedule/launchd.py`
-- `src/agent_usage/commands/schedule.py`
+- `src/tomax/schedule/launchd.py`
+- `src/tomax/commands/schedule.py`
 - `tests/schedule/test_launchd.py`
 
 **Commands**
 
 ```bash
-agent-usage schedule install --daily-at 09:00
-agent-usage schedule status
-agent-usage schedule remove
+tomax schedule install --daily-at 09:00
+tomax schedule status
+tomax schedule remove
 ```
 
 Test generated plist content, local logs, and equivalence to `collect && publish`. Commit `feat: add macOS daily scheduler`.
@@ -379,7 +379,7 @@ Test generated plist content, local logs, and equivalence to `collect && publish
 uv run pytest -q
 uv run ruff check .
 uv build
-agent-usage --help
+tomax --help
 ```
 
 Release acceptance must prove:

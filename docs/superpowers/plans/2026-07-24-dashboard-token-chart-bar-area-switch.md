@@ -30,23 +30,23 @@ Total token usage chart currently always renders as an area chart (`dashboard-ui
 
 ## Part 3 — Threshold config (Python, persisted in AppConfig)
 
-Follow the `initial_collection_start` pattern exactly (`src/agent_usage/config.py`):
+Follow the `initial_collection_start` pattern exactly (`src/tomax/config.py`):
 
 - Add `bar_chart_threshold_days: int = 15` field to `AppConfig` (near line 71).
 - Add `_validate_bar_chart_threshold_days(value)` validator (must be a positive int), called from `__post_init__`, mirroring `_validate_initial_collection_start`.
 - Update `to_dict`/`from_dict` to include the field (lines ~97-113).
-- New CLI subcommand `config_app.command("bar-chart-threshold")` in `cli.py` (mirrors `config_start_date` at `cli.py:84-106`): `agent-usage config bar-chart-threshold --days N`, validates `N >= 1` via `typer.BadParameter`, `replace(...)`, `save_config`.
+- New CLI subcommand `config_app.command("bar-chart-threshold")` in `cli.py` (mirrors `config_start_date` at `cli.py:84-106`): `tomax config bar-chart-threshold --days N`, validates `N >= 1` via `typer.BadParameter`, `replace(...)`, `save_config`.
 - `doctor` command gets one more line: `typer.echo(f"bar chart threshold: {report.bar_chart_threshold_days} day(s)")`; `DoctorReport`/`run_doctor` in `doctor.py` gets the field plumbed through the same way `initial_collection_start` was.
 
 ## Part 4 — Thread threshold into dashboard_data.py, compute chart type server-side
 
 Follow the exact `pie_top_n` thread (per-render display setting, sourced from persisted config instead of a flag):
 
-- `src/agent_usage/commands/render.py` and `commands/dashboard.py`: load `config.bar_chart_threshold_days`, pass through to `dashboard/export.py`/`dashboard/payload.py` alongside existing `pie_top_n` threading (same call sites: `render.py:56,84`, `dashboard.py:31,47`, `dashboard/export.py:116,128`, `dashboard/payload.py:39,52`).
-- `src/agent_usage/render/dashboard_data.py`: `build_dashboard_data(..., bar_chart_threshold_days: int = 15, ...)`. After computing `tokens`/`window` (lines ~37-54), compute span days from `window["start"]`/`window["end"]` (`date.fromisoformat(...)`, `(end - start).days + 1`) and add `"tokensChartType": "bar" if span_days > bar_chart_threshold_days else "area"` to the returned dict.
+- `src/tomax/commands/render.py` and `commands/dashboard.py`: load `config.bar_chart_threshold_days`, pass through to `dashboard/export.py`/`dashboard/payload.py` alongside existing `pie_top_n` threading (same call sites: `render.py:56,84`, `dashboard.py:31,47`, `dashboard/export.py:116,128`, `dashboard/payload.py:39,52`).
+- `src/tomax/render/dashboard_data.py`: `build_dashboard_data(..., bar_chart_threshold_days: int = 15, ...)`. After computing `tokens`/`window` (lines ~37-54), compute span days from `window["start"]`/`window["end"]` (`date.fromisoformat(...)`, `(end - start).days + 1`) and add `"tokensChartType": "bar" if span_days > bar_chart_threshold_days else "area"` to the returned dict.
 
 ## Verification
 
 - `pytest -q` — extend `tests/test_config.py` (threshold field default/validation/persistence), `tests/commands/test_cli.py` (`config bar-chart-threshold` command tests, mirroring `test_config_start_date_*`), `tests/commands/test_doctor.py` (surfaces threshold), `tests/render/test_dashboard_data.py` (asserts `tokensChartType` flips at the threshold boundary — exactly `threshold` days → `"area"`, `threshold + 1` days → `"bar"`).
 - `cd dashboard-ui && pnpm build` (or existing build script) to confirm the newly-installed components + `TokenBar`/`TokenChart` type-check and compile.
-- Manual: `agent-usage config bar-chart-threshold --days 5`, `agent-usage collect`, `agent-usage render --rebuild`, open the preview, confirm the chart renders as stacked bars when the collected span exceeds 5 days; bump `--days 100` and re-render to confirm it falls back to the area chart.
+- Manual: `tomax config bar-chart-threshold --days 5`, `tomax collect`, `tomax render --rebuild`, open the preview, confirm the chart renders as stacked bars when the collected span exceeds 5 days; bump `--days 100` and re-render to confirm it falls back to the area chart.

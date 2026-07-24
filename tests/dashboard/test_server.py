@@ -2,7 +2,7 @@ import json
 import urllib.request
 from threading import Thread
 
-from agent_usage.dashboard.server import make_server
+from tomax.dashboard.server import make_server
 
 
 def _get(url: str) -> tuple[int, bytes, str]:

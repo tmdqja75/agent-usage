@@ -6,7 +6,7 @@
 ## Problem
 
 The managed README dashboard section (`render_dashboard` in
-`src/agent_usage/render/markdown.py`) has grown hard to scan:
+`src/tomax/render/markdown.py`) has grown hard to scan:
 
 1. The Skills/MCP horizontal bar chart grows with the number of distinct
    names observed. With 24 skills observed in practice, the chart is
@@ -45,7 +45,7 @@ The managed README dashboard section (`render_dashboard` in
 
 ### 1. Skills/MCP: bar chart → pie chart, with a top-N cap
 
-`render_usage_bar_chart` in `src/agent_usage/render/plotly.py` is
+`render_usage_bar_chart` in `src/tomax/render/plotly.py` is
 replaced by `render_usage_pie_chart(*, title: str, counters: Mapping[str, int], top_n: int) -> bytes`.
 
 Behavior:
@@ -72,7 +72,7 @@ tools).
 ### 2. New chart: agent usage-share bar
 
 New function `render_agent_share_bar(*, agent_totals: Mapping[str, dict]) -> bytes`
-in `src/agent_usage/render/plotly.py`.
+in `src/tomax/render/plotly.py`.
 
 - Single 100%-stacked horizontal bar (one row, one segment per agent).
 - Segment width = that agent's share of total lifetime `headline_total`
@@ -93,7 +93,7 @@ in `src/agent_usage/render/plotly.py`.
 
 ### 3. Markdown layout: drop redundant headings, add side-by-side pies
 
-`render_dashboard_markdown` in `src/agent_usage/render/markdown.py`
+`render_dashboard_markdown` in `src/tomax/render/markdown.py`
 changes from:
 
 ```
@@ -134,7 +134,7 @@ HTML), matching the project's existing plain-markdown style.
 
 ### 4. Sizing changes to existing charts
 
-In `src/agent_usage/render/plotly.py`:
+In `src/tomax/render/plotly.py`:
 - `_TOKEN_CHART_HEIGHT`: 390 → 300
 - Pie chart margins trimmed relative to the old bar chart's margins
   (a pie doesn't need the bar chart's long axis-label margin).
@@ -144,7 +144,7 @@ In `src/agent_usage/render/plotly.py`:
 `top_n` flows from two entry points down to `render_usage_pie_chart`,
 both defaulting to **6**:
 
-- **`agent-usage render`** (`src/agent_usage/cli.py`): new
+- **`tomax render`** (`src/tomax/cli.py`): new
   `--pie-top-n` typer option → `commands/render.py: render(..., pie_top_n: int = 6)`
   → `render_dashboard(..., pie_top_n=...)`.
 - **`scripts/build_profile_dashboard.py`** (runs in the profile repo's
@@ -157,7 +157,7 @@ both defaulting to **6**:
 - `pie_top_n: int = 6` param on `render_dashboard` (used when calling
   `render_usage_pie_chart` for both Skills and MCP).
 - `agent_share_chart_path` param (default
-  `"assets/agent-usage/agent-share.png"`) on both functions, alongside
+  `"assets/tomax/agent-share.png"`) on both functions, alongside
   the existing four chart-path params.
 
 `templates/github-workflow.yml` is unaffected — it will pick up the
@@ -167,10 +167,10 @@ of scope here.
 
 ## Affected files (implementation reference, not exhaustive)
 
-- `src/agent_usage/render/plotly.py` — pie chart fn, agent-share bar fn, sizing constants
-- `src/agent_usage/render/markdown.py` — markdown layout, `render_dashboard` signature
-- `src/agent_usage/commands/render.py` — thread `pie_top_n` through local preview
-- `src/agent_usage/cli.py` — `--pie-top-n` typer option
+- `src/tomax/render/plotly.py` — pie chart fn, agent-share bar fn, sizing constants
+- `src/tomax/render/markdown.py` — markdown layout, `render_dashboard` signature
+- `src/tomax/commands/render.py` — thread `pie_top_n` through local preview
+- `src/tomax/cli.py` — `--pie-top-n` typer option
 - `scripts/build_profile_dashboard.py` — `--pie-top-n` argparse option
 - `tests/render/test_markdown.py`, plotly render tests — update for new chart fns/layout
 

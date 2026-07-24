@@ -1,4 +1,4 @@
-from agent_usage.render.markdown import (
+from tomax.render.markdown import (
     DASHBOARD_IMAGE_PATH,
     MARKER_END,
     MARKER_START,
@@ -22,7 +22,7 @@ def test_section_uses_custom_image_path():
 
 
 def test_update_readme_replaces_between_markers_and_is_idempotent():
-    existing = "# Title\n\nintro\n\n<!-- agent-usage:start -->\nOLD\n<!-- agent-usage:end -->\n\nfooter\n"
+    existing = "# Title\n\nintro\n\n<!-- tomax:start -->\nOLD\n<!-- tomax:end -->\n\nfooter\n"
     section = render_dashboard_markdown()
     once = update_readme(existing, section)
     twice = update_readme(once, section)

@@ -4,7 +4,7 @@
 
 **Goal:** Replace the Skills/MCP horizontal bar charts with height-capped pie charts, add a new agent usage-share bar, and trim the managed README dashboard's markdown scaffolding so the whole section renders shorter.
 
-**Architecture:** All chart rendering stays in `src/agent_usage/render/plotly.py` as pure functions taking plain `Mapping`/`Sequence` data and returning PNG bytes (no model imports, matching the existing pattern). `render_dashboard` in `src/agent_usage/render/markdown.py` remains the single orchestration point tying aggregation, chart rendering, and markdown assembly together. A new `pie_top_n` parameter and a new `agent_share_chart_path` parameter flow from the two CLI entry points (`agent-usage render` and `scripts/build_profile_dashboard.py`) down through `commands/render.py` / `build_profile_dashboard.py` to `render_dashboard`.
+**Architecture:** All chart rendering stays in `src/tomax/render/plotly.py` as pure functions taking plain `Mapping`/`Sequence` data and returning PNG bytes (no model imports, matching the existing pattern). `render_dashboard` in `src/tomax/render/markdown.py` remains the single orchestration point tying aggregation, chart rendering, and markdown assembly together. A new `pie_top_n` parameter and a new `agent_share_chart_path` parameter flow from the two CLI entry points (`tomax render` and `scripts/build_profile_dashboard.py`) down through `commands/render.py` / `build_profile_dashboard.py` to `render_dashboard`.
 
 **Tech Stack:** Python 3.11, Plotly `go.Figure`/`go.Pie`/`go.Bar`, Kaleido (static PNG export), pytest, Typer.
 
@@ -22,7 +22,7 @@
 ### Task 1: Pure helpers — `bucket_top_n` and `stacked_percentages`
 
 **Files:**
-- Modify: `src/agent_usage/render/plotly.py`
+- Modify: `src/tomax/render/plotly.py`
 - Test: `tests/render/test_plotly.py`
 
 **Interfaces:**
@@ -37,7 +37,7 @@
 Add to `tests/render/test_plotly.py` (append after the existing `test_rank_usage_orders_most_used_first_then_name` test, before the bar chart test — the bar chart test and its import are still untouched in this task):
 
 ```python
-from agent_usage.render.plotly import bucket_top_n, stacked_percentages
+from tomax.render.plotly import bucket_top_n, stacked_percentages
 
 
 def test_bucket_top_n_keeps_all_entries_when_under_the_cap() -> None:
@@ -74,10 +74,10 @@ def test_stacked_percentages_preserves_input_order() -> None:
     assert stacked_percentages([300, 100, 0]) == [75, 25, 0]
 ```
 
-Move the new `from agent_usage.render.plotly import bucket_top_n, stacked_percentages` line up into the single existing import block at the top of the file instead of leaving it inline — the file currently has one `from agent_usage.render.plotly import (...)` block; add `bucket_top_n` and `stacked_percentages` to it alphabetically:
+Move the new `from tomax.render.plotly import bucket_top_n, stacked_percentages` line up into the single existing import block at the top of the file instead of leaving it inline — the file currently has one `from tomax.render.plotly import (...)` block; add `bucket_top_n` and `stacked_percentages` to it alphabetically:
 
 ```python
-from agent_usage.render.plotly import (
+from tomax.render.plotly import (
     bucket_top_n,
     rank_usage,
     render_stacked_token_chart,
@@ -95,7 +95,7 @@ Expected: `ImportError: cannot import name 'bucket_top_n'` (and `stacked_percent
 
 - [ ] **Step 3: Implement the two pure helpers**
 
-In `src/agent_usage/render/plotly.py`, add directly after the existing `rank_usage` function (after line 37):
+In `src/tomax/render/plotly.py`, add directly after the existing `rank_usage` function (after line 37):
 
 ```python
 _OTHER_LABEL = "Other"
@@ -142,7 +142,7 @@ Expected: all tests PASS, including the pre-existing ones (`render_usage_bar_cha
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/render/plotly.py tests/render/test_plotly.py
+git add src/tomax/render/plotly.py tests/render/test_plotly.py
 git commit -m "feat: add bucket_top_n and stacked_percentages chart helpers"
 ```
 
@@ -151,7 +151,7 @@ git commit -m "feat: add bucket_top_n and stacked_percentages chart helpers"
 ### Task 2: Replace the Skills/MCP bar chart with a capped pie chart
 
 **Files:**
-- Modify: `src/agent_usage/render/plotly.py`
+- Modify: `src/tomax/render/plotly.py`
 - Test: `tests/render/test_plotly.py`
 
 **Interfaces:**
@@ -167,10 +167,10 @@ Remove this import line:
 ```python
     render_usage_bar_chart,
 ```
-from the `from agent_usage.render.plotly import (...)` block, and add `render_usage_pie_chart` in its place (alphabetically, after `render_stacked_token_chart`):
+from the `from tomax.render.plotly import (...)` block, and add `render_usage_pie_chart` in its place (alphabetically, after `render_stacked_token_chart`):
 
 ```python
-from agent_usage.render.plotly import (
+from tomax.render.plotly import (
     bucket_top_n,
     rank_usage,
     render_stacked_token_chart,
@@ -227,7 +227,7 @@ Expected: `ImportError: cannot import name 'render_usage_pie_chart'`.
 
 - [ ] **Step 3: Implement `render_usage_pie_chart`, delete `render_usage_bar_chart`**
 
-In `src/agent_usage/render/plotly.py`:
+In `src/tomax/render/plotly.py`:
 
 Change `_base_layout` (currently takes only `title` and `height`) to accept an optional `width`:
 
@@ -342,7 +342,7 @@ Expected: all tests PASS, including `test_render_stacked_token_chart_produces_a_
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/render/plotly.py tests/render/test_plotly.py
+git add src/tomax/render/plotly.py tests/render/test_plotly.py
 git commit -m "feat: replace Skills/MCP bar chart with a top-N pie chart"
 ```
 
@@ -351,7 +351,7 @@ git commit -m "feat: replace Skills/MCP bar chart with a top-N pie chart"
 ### Task 3: New chart — agent usage-share bar
 
 **Files:**
-- Modify: `src/agent_usage/render/plotly.py`
+- Modify: `src/tomax/render/plotly.py`
 - Test: `tests/render/test_plotly.py`
 
 **Interfaces:**
@@ -363,7 +363,7 @@ git commit -m "feat: replace Skills/MCP bar chart with a top-N pie chart"
 Add `render_agent_share_bar` to the import block in `tests/render/test_plotly.py`:
 
 ```python
-from agent_usage.render.plotly import (
+from tomax.render.plotly import (
     bucket_top_n,
     rank_usage,
     render_agent_share_bar,
@@ -426,7 +426,7 @@ Expected: `ImportError: cannot import name 'render_agent_share_bar'`.
 
 - [ ] **Step 3: Implement `render_agent_share_bar`**
 
-In `src/agent_usage/render/plotly.py`, add near the other chart constants:
+In `src/tomax/render/plotly.py`, add near the other chart constants:
 
 ```python
 _AGENT_BAR_HEIGHT = 150
@@ -498,7 +498,7 @@ Expected: all tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/render/plotly.py tests/render/test_plotly.py
+git add src/tomax/render/plotly.py tests/render/test_plotly.py
 git commit -m "feat: add render_agent_share_bar chart"
 ```
 
@@ -507,7 +507,7 @@ git commit -m "feat: add render_agent_share_bar chart"
 ### Task 4: Trim the markdown layout and thread the new chart through `render_dashboard`
 
 **Files:**
-- Modify: `src/agent_usage/render/markdown.py`
+- Modify: `src/tomax/render/markdown.py`
 - Test: `tests/render/test_markdown.py`
 
 **Interfaces:**
@@ -555,12 +555,12 @@ Expected: FAIL — `"## Agent Share" in result["markdown"]` is False against the
 
 - [ ] **Step 3: Update `render_dashboard_markdown` and `render_dashboard`**
 
-In `src/agent_usage/render/markdown.py`:
+In `src/tomax/render/markdown.py`:
 
 Change the import line:
 
 ```python
-from agent_usage.render.plotly import (
+from tomax.render.plotly import (
     render_agent_share_bar,
     render_stacked_token_chart,
     render_usage_pie_chart,
@@ -570,7 +570,7 @@ from agent_usage.render.plotly import (
 Add a default path constant next to the existing four:
 
 ```python
-_DEFAULT_AGENT_SHARE_CHART_PATH = "assets/agent-usage/agent-share.png"
+_DEFAULT_AGENT_SHARE_CHART_PATH = "assets/tomax/agent-share.png"
 ```
 
 Replace `render_dashboard_markdown` with:
@@ -624,7 +624,7 @@ def render_dashboard(
     """Build the full dashboard: Markdown plus five static Plotly PNG charts.
 
     ``payloads`` should already be validated (see
-    :func:`agent_usage.aggregate.validate_and_partition`). Pure function of
+    :func:`tomax.aggregate.validate_and_partition`). Pure function of
     its inputs: ``today`` must be supplied by the caller so the whole pipeline
     stays deterministic and testable. ``generated_at`` remains accepted for
     backwards-compatible callers but is intentionally not inserted into the
@@ -684,7 +684,7 @@ Expected: all tests PASS. (The other pre-existing tests in this file — `test_r
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/render/markdown.py tests/render/test_markdown.py
+git add src/tomax/render/markdown.py tests/render/test_markdown.py
 git commit -m "feat: trim dashboard markdown layout, add agent-share section"
 ```
 
@@ -693,7 +693,7 @@ git commit -m "feat: trim dashboard markdown layout, add agent-share section"
 ### Task 5: Thread `pie_top_n` and the agent-share chart through the local preview command
 
 **Files:**
-- Modify: `src/agent_usage/commands/render.py`
+- Modify: `src/tomax/commands/render.py`
 - Test: `tests/commands/test_render.py`
 
 **Interfaces:**
@@ -715,8 +715,8 @@ def test_render_writes_the_agent_share_chart(tmp_path) -> None:
     )
 
     readme = result.readme_path.read_text(encoding="utf-8")
-    assert "assets/agent-usage/agent-share.png" in readme
-    assert (output_dir / "assets" / "agent-usage" / "agent-share.png").exists()
+    assert "assets/tomax/agent-share.png" in readme
+    assert (output_dir / "assets" / "tomax" / "agent-share.png").exists()
 
 
 def test_render_honors_a_custom_pie_top_n(tmp_path) -> None:
@@ -738,14 +738,14 @@ def test_render_honors_a_custom_pie_top_n(tmp_path) -> None:
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest tests/commands/test_render.py -v`
-Expected: `test_render_writes_the_agent_share_chart` FAILs (`assert "assets/agent-usage/agent-share.png" in readme` is False). `test_render_honors_a_custom_pie_top_n` FAILs with `TypeError: render() got an unexpected keyword argument 'pie_top_n'`.
+Expected: `test_render_writes_the_agent_share_chart` FAILs (`assert "assets/tomax/agent-share.png" in readme` is False). `test_render_honors_a_custom_pie_top_n` FAILs with `TypeError: render() got an unexpected keyword argument 'pie_top_n'`.
 
 - [ ] **Step 3: Update `commands/render.py`**
 
-In `src/agent_usage/commands/render.py`, add the new path constant next to the existing four:
+In `src/tomax/commands/render.py`, add the new path constant next to the existing four:
 
 ```python
-_AGENT_SHARE_CHART_RELATIVE_PATH = Path("assets/agent-usage/agent-share.png")
+_AGENT_SHARE_CHART_RELATIVE_PATH = Path("assets/tomax/agent-share.png")
 ```
 
 Replace the `render` function signature and body:
@@ -819,16 +819,16 @@ Expected: all tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/commands/render.py tests/commands/test_render.py
+git add src/tomax/commands/render.py tests/commands/test_render.py
 git commit -m "feat: write the agent-share chart from the local preview command"
 ```
 
 ---
 
-### Task 6: Add `--pie-top-n` to the `agent-usage render` CLI command
+### Task 6: Add `--pie-top-n` to the `tomax render` CLI command
 
 **Files:**
-- Modify: `src/agent_usage/cli.py`
+- Modify: `src/tomax/cli.py`
 - Test: `tests/commands/test_cli.py`
 
 **Interfaces:**
@@ -871,7 +871,7 @@ Expected: `test_render_accepts_a_custom_pie_top_n` FAILs with `No such option: -
 
 - [ ] **Step 3: Add the option**
 
-In `src/agent_usage/cli.py`, replace the `render` command:
+In `src/tomax/cli.py`, replace the `render` command:
 
 ```python
 @app.command()
@@ -899,9 +899,9 @@ def render(
         generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
         pie_top_n=pie_top_n,
     )
-    typer.echo(f"agent-usage: preview written to {result.readme_path}")
+    typer.echo(f"tomax: preview written to {result.readme_path}")
     typer.echo(
-        "agent-usage: dashboard changed" if result.changed else "agent-usage: dashboard unchanged"
+        "tomax: dashboard changed" if result.changed else "tomax: dashboard unchanged"
     )
 ```
 
@@ -913,7 +913,7 @@ Expected: all tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/cli.py tests/commands/test_cli.py
+git add src/tomax/cli.py tests/commands/test_cli.py
 git commit -m "feat: add --pie-top-n option to the render CLI command"
 ```
 
@@ -924,7 +924,7 @@ git commit -m "feat: add --pie-top-n option to the render CLI command"
 **Files:**
 - Modify: `scripts/build_profile_dashboard.py`
 
-This script has no existing pytest coverage (it's explicitly "not part of the installable `agent_usage` package" — meant to be checked out and run directly in the profile repo's CI, per its module docstring). This task follows that existing pattern and verifies with a manual smoke run instead of adding new pytest infrastructure for a file nothing else in the repo tests.
+This script has no existing pytest coverage (it's explicitly "not part of the installable `tomax` package" — meant to be checked out and run directly in the profile repo's CI, per its module docstring). This task follows that existing pattern and verifies with a manual smoke run instead of adding new pytest infrastructure for a file nothing else in the repo tests.
 
 **Interfaces:**
 - Consumes: `render_dashboard(..., agent_share_chart_path=..., pie_top_n=...)` from Task 4.
@@ -935,7 +935,7 @@ This script has no existing pytest coverage (it's explicitly "not part of the in
 In `scripts/build_profile_dashboard.py`, add a default path constant next to the existing four:
 
 ```python
-DEFAULT_AGENT_SHARE_CHART = Path("assets/agent-usage/agent-share.png")
+DEFAULT_AGENT_SHARE_CHART = Path("assets/tomax/agent-share.png")
 ```
 
 Replace the `build` function signature and body:
@@ -969,7 +969,7 @@ def build(
     partition = validate_and_partition(entries, today=today)
     for issue in partition.issues:
         print(
-            f"agent-usage: skipping invalid record "
+            f"tomax: skipping invalid record "
             f"device={issue.device_id} date={issue.date} reason={issue.reason}",
             file=sys.stderr,
         )
@@ -1048,18 +1048,18 @@ Run against the repo's own preview fixture data to confirm the script still runs
 
 ```bash
 uv run python scripts/build_profile_dashboard.py \
-  --data-dir agent-usage-preview/data/v1/devices \
+  --data-dir tomax-preview/data/v1/devices \
   --readme /tmp/smoke-readme/README.md \
-  --rolling-chart assets/agent-usage/token-activity-14d.png \
-  --total-chart assets/agent-usage/token-activity-total.png \
-  --agent-share-chart assets/agent-usage/agent-share.png \
-  --skills-chart assets/agent-usage/skills.png \
-  --mcp-chart assets/agent-usage/mcp.png \
+  --rolling-chart assets/tomax/token-activity-14d.png \
+  --total-chart assets/tomax/token-activity-total.png \
+  --agent-share-chart assets/tomax/agent-share.png \
+  --skills-chart assets/tomax/skills.png \
+  --mcp-chart assets/tomax/mcp.png \
   --pie-top-n 4 \
   --today 2026-07-21
 ```
 
-Expected: prints `agent-usage: dashboard changed`; `/tmp/smoke-readme/assets/agent-usage/agent-share.png` exists and is a valid PNG (`file /tmp/smoke-readme/assets/agent-usage/agent-share.png` reports `PNG image data`); `/tmp/smoke-readme/README.md` contains `## Agent Share` and a markdown table row for Skills/MCP.
+Expected: prints `tomax: dashboard changed`; `/tmp/smoke-readme/assets/tomax/agent-share.png` exists and is a valid PNG (`file /tmp/smoke-readme/assets/tomax/agent-share.png` reports `PNG image data`); `/tmp/smoke-readme/README.md` contains `## Agent Share` and a markdown table row for Skills/MCP.
 
 Clean up the scratch output afterward: `rm -rf /tmp/smoke-readme`.
 
@@ -1090,20 +1090,20 @@ Expected: no errors. Fix anything ruff flags (e.g. unused imports left over from
 - [ ] **Step 3: Regenerate the local preview and eyeball it**
 
 ```bash
-uv run agent-usage render --output-dir agent-usage-preview
+uv run tomax render --output-dir tomax-preview
 ```
 
-Open `agent-usage-preview/assets/agent-usage/skills.png`, `mcp.png`, and `agent-share.png` and confirm: the Skills pie has at most 7 slices (6 + Other) if more than 6 skills were observed, the MCP pie renders the same way, and the agent-share bar shows a single 100%-wide stacked bar with percentage labels. Confirm `agent-usage-preview/README.md` matches the new layout from Task 4's test (`## Agent Share`, no `### Skills`/`### MCP` subheadings, Skills/MCP in a two-column table).
+Open `tomax-preview/assets/tomax/skills.png`, `mcp.png`, and `agent-share.png` and confirm: the Skills pie has at most 7 slices (6 + Other) if more than 6 skills were observed, the MCP pie renders the same way, and the agent-share bar shows a single 100%-wide stacked bar with percentage labels. Confirm `tomax-preview/README.md` matches the new layout from Task 4's test (`## Agent Share`, no `### Skills`/`### MCP` subheadings, Skills/MCP in a two-column table).
 
 - [ ] **Step 4: Commit the regenerated preview assets**
 
 ```bash
-git add agent-usage-preview
+git add tomax-preview
 git commit -m "chore: regenerate dashboard preview with the compact layout"
 ```
 
 ## Self-Review Notes
 
 - **Spec coverage:** pie chart + top-N cap (Task 2), CLI-adjustable top-N (Task 6, Task 7), agent-share bar with lifetime scope and fixed order (Task 3), trimmed headings + side-by-side Skills/MCP table (Task 4), shrunk chart heights (Task 2's `_TOKEN_CHART_HEIGHT` change, Task 2/3's pie/bar-specific compact sizing) — all covered.
-- **Type consistency:** `agent_totals` is `Mapping[str, Mapping[str, int]]` consistently across `render_agent_share_bar` (Task 3) and its caller in `render_dashboard` (Task 4), matching `aggregate_records()["agents"]`'s actual shape (`dict[str, dict]` with a `headline_total` int key, per `src/agent_usage/aggregate.py`). `pie_top_n: int` is consistent from the Typer option (Task 6) through `commands/render.py` (Task 5) to `render_dashboard` (Task 4) to `render_usage_pie_chart` (Task 2).
+- **Type consistency:** `agent_totals` is `Mapping[str, Mapping[str, int]]` consistently across `render_agent_share_bar` (Task 3) and its caller in `render_dashboard` (Task 4), matching `aggregate_records()["agents"]`'s actual shape (`dict[str, dict]` with a `headline_total` int key, per `src/tomax/aggregate.py`). `pie_top_n: int` is consistent from the Typer option (Task 6) through `commands/render.py` (Task 5) to `render_dashboard` (Task 4) to `render_usage_pie_chart` (Task 2).
 - **No placeholders:** every step above has complete, real code — no TBDs.

@@ -14,11 +14,11 @@ from pathlib import Path
 
 import pytest
 
-import agent_usage.commands.publish as publish_module
-from agent_usage.commands.publish import GhAuthError, check_gh_auth, publish
-from agent_usage.ledger.repository import LedgerRepository
-from agent_usage.models import NormalizedUsageRecord, SupportedAgent, TokenUsage
-from agent_usage.publish.git import clone_or_open
+import tomax.commands.publish as publish_module
+from tomax.commands.publish import GhAuthError, check_gh_auth, publish
+from tomax.ledger.repository import LedgerRepository
+from tomax.models import NormalizedUsageRecord, SupportedAgent, TokenUsage
+from tomax.publish.git import clone_or_open
 
 UTC = timezone.utc
 TODAY = date(2026, 7, 18)

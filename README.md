@@ -1,6 +1,6 @@
-# agent-usage
+# tomax
 
-`agent-usage` is a macOS-first Python CLI that builds privacy-conscious,
+`tomax` is a macOS-first Python CLI that builds privacy-conscious,
 local usage summaries for **Hermes Agent**, **Claude Code**, and **Codex**.
 
 It reads each supported local source in read-only mode, normalizes only the
@@ -18,7 +18,7 @@ Run the commands below from a checkout of this repository.
 
 ```sh
 uv sync --dev --locked
-uv run agent-usage --help
+uv run tomax --help
 ```
 
 ## Quick start: collect and preview locally
@@ -29,7 +29,7 @@ any), and checks source health without adding ledger records or advancing
 collection checkpoints.
 
 ```sh
-uv run agent-usage doctor
+uv run tomax doctor
 ```
 
 Preview collection before persisting anything, then run the real collection.
@@ -37,8 +37,8 @@ The dry run observes the same inputs but does not insert records or advance
 checkpoints.
 
 ```sh
-uv run agent-usage collect --dry-run
-uv run agent-usage collect
+uv run tomax collect --dry-run
+uv run tomax collect
 ```
 
 Render a fully local dashboard preview after collecting. This command does not
@@ -46,21 +46,21 @@ use Git or the network; it writes a preview README, sanitized daily records,
 and a screenshot of the dashboard to the chosen directory.
 
 ```sh
-uv run agent-usage render --output-dir ./agent-usage-preview
-open ./agent-usage-preview/README.md
+uv run tomax render --output-dir ./tomax-preview
+open ./tomax-preview/README.md
 ```
 
 Omit `--output-dir` to write the preview alongside the private ledger.
 
 ## Interactive localhost dashboard
 
-`agent-usage dashboard` serves an interactive chart dashboard on
+`tomax dashboard` serves an interactive chart dashboard on
 `127.0.0.1` (loopback only) from your local ledger data. The React UI is built
 **on demand** the first time you run the command and cached under
 `dashboard-ui/dist/`; it is rebuilt only when the UI source changes.
 
 ```sh
-uv run agent-usage dashboard
+uv run tomax dashboard
 ```
 
 This builds the payload, compiles the UI if needed, starts the server, and
@@ -129,15 +129,15 @@ being counted twice.
 ## Publish sanitized aggregates (optional)
 
 Publishing is opt-in. It requires an existing GitHub profile repository and an
-authenticated GitHub CLI session; `agent-usage` does not store or manage a
+authenticated GitHub CLI session; `tomax` does not store or manage a
 GitHub token.
 
 ```sh
 gh auth status
-uv run agent-usage init --repo OWNER/PROFILE-REPO
-uv run agent-usage collect
-uv run agent-usage render --output-dir ./agent-usage-preview
-uv run agent-usage publish
+uv run tomax init --repo OWNER/PROFILE-REPO
+uv run tomax collect
+uv run tomax render --output-dir ./tomax-preview
+uv run tomax publish
 ```
 
 `init` is local-only: it records the `OWNER/REPO` target and ensures the local
@@ -155,7 +155,7 @@ an explicit local checkout.
 
 To generate an aggregated profile dashboard, copy
 [`templates/github-workflow.yml`](templates/github-workflow.yml) into the
-profile repository as `.github/workflows/agent-usage-dashboard.yml`. The
+profile repository as `.github/workflows/tomax-dashboard.yml`. The
 workflow validates device/day records and updates the managed README section
 and chart assets only when data beneath `data/v1/**` changes. Review and enable
 that workflow only when you are ready to publish sanitized aggregates.
@@ -166,9 +166,9 @@ The scheduler installs a local `launchd` job that runs `collect` and then
 `publish` at the requested local time. It is not enabled by default.
 
 ```sh
-uv run agent-usage schedule install --daily-at 09:00
-uv run agent-usage schedule status
-uv run agent-usage schedule remove
+uv run tomax schedule install --daily-at 09:00
+uv run tomax schedule status
+uv run tomax schedule remove
 ```
 
 Install a schedule only after `init`, GitHub authentication, and a manual
@@ -197,5 +197,5 @@ uv sync --dev --locked
 uv run pytest -q
 uv run ruff check .
 uv build
-uv run agent-usage --help
+uv run tomax --help
 ```

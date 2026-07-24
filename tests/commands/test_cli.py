@@ -6,8 +6,8 @@ import re
 
 from typer.testing import CliRunner
 
-import agent_usage.cli as cli_module
-from agent_usage.cli import app
+import tomax.cli as cli_module
+from tomax.cli import app
 
 runner = CliRunner()
 
@@ -49,7 +49,7 @@ def test_schedule_help_lists_install_status_and_remove() -> None:
 
 
 def test_schedule_install_wires_local_paths_and_reports_the_time(tmp_path, monkeypatch) -> None:
-    from agent_usage.commands.schedule import ScheduleInstallResult
+    from tomax.commands.schedule import ScheduleInstallResult
 
     _patch_local_paths(monkeypatch, tmp_path)
     captured = {}
@@ -69,7 +69,7 @@ def test_schedule_install_wires_local_paths_and_reports_the_time(tmp_path, monke
 
 
 def test_schedule_status_reports_not_installed_without_printing_a_local_path(tmp_path, monkeypatch) -> None:
-    from agent_usage.schedule.launchd import ScheduleStatus
+    from tomax.schedule.launchd import ScheduleStatus
 
     _patch_local_paths(monkeypatch, tmp_path)
     monkeypatch.setattr(
@@ -135,7 +135,7 @@ def test_collect_dry_run_reports_and_writes_nothing(tmp_path, monkeypatch) -> No
     assert "dry run" in result.stdout.lower()
     ledger_path = tmp_path / "ledger.sqlite3"
     if ledger_path.exists():
-        from agent_usage.ledger.repository import LedgerRepository
+        from tomax.ledger.repository import LedgerRepository
 
         repository = LedgerRepository.open(ledger_path)
         try:
@@ -202,7 +202,7 @@ def test_publish_command_requires_a_repo_target(tmp_path, monkeypatch) -> None:
 
 
 def test_publish_command_reports_a_clear_error_when_gh_auth_fails(tmp_path, monkeypatch) -> None:
-    from agent_usage.config import AppConfig, save_config
+    from tomax.config import AppConfig, save_config
 
     _patch_local_paths(monkeypatch, tmp_path)
     save_config(tmp_path / "config.json", AppConfig(repo_target="tmdqja75/tmdqja75"))
@@ -215,7 +215,7 @@ def test_publish_command_reports_a_clear_error_when_gh_auth_fails(tmp_path, monk
 
         return _Result()
 
-    import agent_usage.commands.publish as publish_module
+    import tomax.commands.publish as publish_module
 
     monkeypatch.setattr(publish_module.subprocess, "run", _fake_run)
 
@@ -229,8 +229,8 @@ def test_publish_command_reports_a_clear_error_when_gh_auth_fails(tmp_path, monk
 def test_publish_command_reports_a_clear_error_when_git_operations_fail(
     tmp_path, monkeypatch
 ) -> None:
-    from agent_usage.config import AppConfig, save_config
-    from agent_usage.publish.git import GitCommandError
+    from tomax.config import AppConfig, save_config
+    from tomax.publish.git import GitCommandError
 
     _patch_local_paths(monkeypatch, tmp_path)
     save_config(tmp_path / "config.json", AppConfig(repo_target="tmdqja75/tmdqja75"))
@@ -334,7 +334,7 @@ def test_collect_uses_the_configured_start_date(tmp_path, monkeypatch) -> None:
     result = runner.invoke(app, ["collect", "--dry-run"])
 
     assert result.exit_code == 0
-    from agent_usage.time_window import EPOCH_START
+    from tomax.time_window import EPOCH_START
 
     assert captured["configured_start"] == EPOCH_START
 
@@ -342,9 +342,9 @@ def test_collect_uses_the_configured_start_date(tmp_path, monkeypatch) -> None:
 def test_publish_command_resolves_repo_url_from_config_and_reports_the_result(
     tmp_path, monkeypatch
 ) -> None:
-    from agent_usage.commands.publish import PublishSummary
-    from agent_usage.config import AppConfig, save_config
-    from agent_usage.publish.git import PublishResult
+    from tomax.commands.publish import PublishSummary
+    from tomax.config import AppConfig, save_config
+    from tomax.publish.git import PublishResult
 
     _patch_local_paths(monkeypatch, tmp_path)
     save_config(tmp_path / "config.json", AppConfig(repo_target="tmdqja75/tmdqja75"))

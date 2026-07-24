@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "agent-usage"
+name = "tomax"
 version = "0.1.0"
 description = "A privacy-conscious macOS-first agent usage collector."
 readme = "README.md"
@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.scripts]
-agent-usage = "agent_usage.cli:main"
+tomax = "tomax.cli:main"
 
 [dependency-groups]
 dev = [

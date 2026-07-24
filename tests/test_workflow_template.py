@@ -15,7 +15,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from agent_usage.public_data import write_daily_record
+from tomax.public_data import write_daily_record
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKFLOW_PATH = REPO_ROOT / "templates" / "github-workflow.yml"
@@ -53,8 +53,8 @@ def _write_device_record(data_dir: Path, device_id: str, day: date, payload: dic
 def _valid_payload(*, device_id: str, day: date) -> dict:
     from datetime import datetime, timezone
 
-    from agent_usage.models import NormalizedUsageRecord, SupportedAgent, TokenUsage
-    from agent_usage.public_data import build_daily_record
+    from tomax.models import NormalizedUsageRecord, SupportedAgent, TokenUsage
+    from tomax.public_data import build_daily_record
 
     record = NormalizedUsageRecord(
         agent=SupportedAgent.CLAUDE_CODE,
@@ -93,7 +93,7 @@ def test_workflow_triggers_only_on_data_partition_changes() -> None:
     # The generated dashboard files must never appear in the trigger paths,
     # or the workflow would loop on its own commits.
     assert "README.md" not in trigger_section
-    assert "assets/agent-usage" not in trigger_section
+    assert "assets/tomax" not in trigger_section
 
 
 def test_workflow_has_write_permissions_and_serialized_concurrency() -> None:
@@ -136,7 +136,7 @@ def test_build_generates_readme_and_dashboard_png(tmp_path: Path, monkeypatch) -
     _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
     readme_path = tmp_path / "README.md"
     readme_path.write_text("# My Profile\n\nIntro text.\n", encoding="utf-8")
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     changed = build_profile_dashboard.build(
@@ -150,7 +150,7 @@ def test_build_generates_readme_and_dashboard_png(tmp_path: Path, monkeypatch) -
 
     assert changed is True
     assert "# My Profile" in readme_path.read_text(encoding="utf-8")
-    assert "agent-usage:start" in readme_path.read_text(encoding="utf-8")
+    assert "tomax:start" in readme_path.read_text(encoding="utf-8")
     png_signature = b"\x89PNG\r\n\x1a\n"
     assert dashboard_png_path.read_bytes().startswith(png_signature)
 
@@ -160,7 +160,7 @@ def test_build_is_idempotent_on_unchanged_input(tmp_path: Path, monkeypatch) -> 
     data_dir = tmp_path / "data" / "v1" / "devices"
     _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
     readme_path = tmp_path / "README.md"
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     kwargs = dict(
@@ -186,7 +186,7 @@ def test_build_skips_malformed_records_and_reports_diagnostics(tmp_path: Path, c
     bad_dir.mkdir(parents=True, exist_ok=True)
     (bad_dir / "2026-07-10.json").write_text("not valid json{{{", encoding="utf-8")
     readme_path = tmp_path / "README.md"
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     changed = build_profile_dashboard.build(
@@ -213,7 +213,7 @@ def test_build_skips_a_non_utf8_record_file_without_crashing(tmp_path: Path, cap
     bad_dir.mkdir(parents=True, exist_ok=True)
     (bad_dir / "2026-07-10.json").write_bytes(b"\xff\xfe\x00not utf-8")
     readme_path = tmp_path / "README.md"
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     changed = build_profile_dashboard.build(
@@ -239,7 +239,7 @@ def test_build_never_leaks_device_ids_or_fingerprints_into_readme(tmp_path: Path
         _valid_payload(device_id="device-super-secret-id", day=date(2026, 7, 10)),
     )
     readme_path = tmp_path / "README.md"
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     build_profile_dashboard.build(
@@ -258,7 +258,7 @@ def test_build_handles_missing_data_dir_without_crashing(tmp_path: Path, monkeyp
     _mock_screenshot_pipeline(monkeypatch)
     data_dir = tmp_path / "data" / "v1" / "devices"  # never created
     readme_path = tmp_path / "README.md"
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     changed = build_profile_dashboard.build(
@@ -282,7 +282,7 @@ def test_build_rejects_future_dated_records_without_crashing(tmp_path: Path, cap
         _valid_payload(device_id="device-a", day=date(2026, 7, 30)),
     )
     readme_path = tmp_path / "README.md"
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     build_profile_dashboard.build(
@@ -303,7 +303,7 @@ def test_main_accepts_cli_arguments_and_exits_zero(tmp_path: Path, monkeypatch) 
     data_dir = tmp_path / "data" / "v1" / "devices"
     _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
     readme_path = tmp_path / "README.md"
-    dashboard_png_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    dashboard_png_path = tmp_path / "assets" / "tomax" / "dashboard.png"
     ui_dir = tmp_path / "dashboard-ui"
 
     exit_code = build_profile_dashboard.main(

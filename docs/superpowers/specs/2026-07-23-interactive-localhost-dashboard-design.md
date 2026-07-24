@@ -26,7 +26,7 @@ README) is unchanged. This feature is a separate, richer, interactive view.
 Three layers. Both data sources converge on one chart-ready payload consumed by
 one React UI.
 
-### 1. Data builder — `src/agent_usage/render/dashboard_data.py` (new)
+### 1. Data builder — `src/tomax/render/dashboard_data.py` (new)
 
 A pure function that turns validated daily payloads (the same
 `validate_and_partition(...).valid_payloads` the Plotly path already produces)
@@ -47,7 +47,7 @@ avoids the interactive path depending on the Plotly/Kaleido rendering module.
   afterward. Errors (no `repo_target` configured, clone failure) surface as
   clear CLI errors, not tracebacks.
 
-### 3. Server — `src/agent_usage/dashboard/server.py` (new)
+### 3. Server — `src/tomax/dashboard/server.py` (new)
 
 - stdlib `http.server` only (no new runtime Python dependency).
 - Serves the on-demand UI build at `dashboard-ui/dist/` (produced at command
@@ -111,10 +111,10 @@ by agent). Grayscale Less→More legend.
 
 ## CLI
 
-New Typer command in `src/agent_usage/commands/dashboard.py`, wired in `cli.py`:
+New Typer command in `src/tomax/commands/dashboard.py`, wired in `cli.py`:
 
 ```
-agent-usage dashboard [--all-devices] [--port 8000] [--no-open] [--pie-top-n 6]
+tomax dashboard [--all-devices] [--port 8000] [--no-open] [--pie-top-n 6]
 ```
 
 ## Testing

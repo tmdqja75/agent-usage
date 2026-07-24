@@ -6,7 +6,7 @@ import hashlib
 import json
 from datetime import date, timedelta
 
-from agent_usage.aggregate import (
+from tomax.aggregate import (
     MAX_PAYLOAD_BYTES,
     aggregate_records,
     daily_agent_totals,
@@ -17,8 +17,8 @@ from agent_usage.aggregate import (
     validate_and_partition,
     validate_record,
 )
-from agent_usage.models import SourceStatus, SupportedAgent
-from agent_usage.public_data import build_daily_record
+from tomax.models import SourceStatus, SupportedAgent
+from tomax.public_data import build_daily_record
 
 TODAY = date(2026, 7, 18)
 
@@ -47,7 +47,7 @@ def _payload(
     skills: dict | None = None,
     agent: SupportedAgent = SupportedAgent.CLAUDE_CODE,
 ) -> dict:
-    from agent_usage.models import NormalizedUsageRecord, TokenUsage
+    from tomax.models import NormalizedUsageRecord, TokenUsage
     from datetime import datetime, timezone
 
     record = NormalizedUsageRecord(
@@ -297,7 +297,7 @@ def test_aggregate_records_handles_an_empty_payload_list() -> None:
 
 
 def test_a_maximally_capped_daily_record_still_passes_validation() -> None:
-    from agent_usage.models import NormalizedUsageRecord, TokenUsage
+    from tomax.models import NormalizedUsageRecord, TokenUsage
     from datetime import datetime, timezone
 
     records = [

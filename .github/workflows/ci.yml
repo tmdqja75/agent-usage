@@ -31,8 +31,8 @@ jobs:
 
       - name: Configure Git identity for publish fixtures
         run: |
-          git config --global user.name "agent-usage CI"
-          git config --global user.email "agent-usage-ci@users.noreply.github.com"
+          git config --global user.name "tomax CI"
+          git config --global user.email "tomax-ci@users.noreply.github.com"
 
       - name: Run tests
         run: uv run pytest -q
@@ -44,4 +44,4 @@ jobs:
         run: uv build
 
       - name: Verify CLI entry point
-        run: uv run agent-usage --help
+        run: uv run tomax --help

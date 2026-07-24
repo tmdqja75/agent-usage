@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_usage.dashboard import remote
+from tomax.dashboard import remote
 
 
 def test_fetch_device_entries_reads_cloned_device_payloads(monkeypatch, tmp_path):

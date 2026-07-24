@@ -16,8 +16,8 @@
 - Export browser context MUST use `color_scheme="dark"`, `reduced_motion="reduce"`, `device_scale_factor=2`, viewport width `1100`.
 - Fixed animation settle wait is exactly `2000` ms (`page.wait_for_timeout(2000)`). Never replace with an unbounded wait.
 - Export network route MUST allow only `http://127.0.0.1:{port}/`-prefixed URLs; all other requests aborted.
-- Single README asset path: `assets/agent-usage/dashboard.png`.
-- Managed README markers unchanged: `<!-- agent-usage:start -->` / `<!-- agent-usage:end -->`.
+- Single README asset path: `assets/tomax/dashboard.png`.
+- Managed README markers unchanged: `<!-- tomax:start -->` / `<!-- tomax:end -->`.
 
 ---
 
@@ -73,7 +73,7 @@ git commit -m "build: replace plotly/kaleido with playwright"
 ### Task 2: `dashboard/export.py` — screenshot export module
 
 **Files:**
-- Create: `src/agent_usage/dashboard/export.py`
+- Create: `src/tomax/dashboard/export.py`
 - Test: `tests/dashboard/test_export.py`
 
 **Interfaces:**
@@ -94,7 +94,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_usage.dashboard import export
+from tomax.dashboard import export
 
 
 def test_url_allowed_accepts_matching_prefix():
@@ -149,7 +149,7 @@ Expected: FAIL with `ModuleNotFoundError` / `AttributeError` (module/functions n
 
 - [ ] **Step 3: Implement `export.py`**
 
-Create `src/agent_usage/dashboard/export.py`:
+Create `src/tomax/dashboard/export.py`:
 
 ```python
 """Capture the interactive React dashboard as a single PNG via headless Chromium.
@@ -172,10 +172,10 @@ from pathlib import Path
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
-from agent_usage.dashboard.payload import build_payload
-from agent_usage.dashboard.server import make_server
-from agent_usage.dashboard.ui_build import ensure_build
-from agent_usage.privacy import PrivacyPolicy
+from tomax.dashboard.payload import build_payload
+from tomax.dashboard.server import make_server
+from tomax.dashboard.ui_build import ensure_build
+from tomax.privacy import PrivacyPolicy
 
 _SETTLE_MS = 2000
 _MISSING_BROWSER_HINTS = ("Executable doesn't exist", "playwright install")
@@ -315,7 +315,7 @@ def test_export_writes_png(tmp_path):
     from datetime import date as _date
     from pathlib import Path
 
-    from agent_usage.privacy import PrivacyPolicy
+    from tomax.privacy import PrivacyPolicy
 
     repo_root = Path(__file__).resolve().parents[2]
     out = tmp_path / "dashboard.png"
@@ -345,7 +345,7 @@ Expected: PASS, or `test_export_writes_png` SKIPPED if Chromium/Node unavailable
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agent_usage/dashboard/export.py tests/dashboard/test_export.py
+git add src/tomax/dashboard/export.py tests/dashboard/test_export.py
 git commit -m "feat(dashboard): add playwright screenshot export"
 ```
 
@@ -354,13 +354,13 @@ git commit -m "feat(dashboard): add playwright screenshot export"
 ### Task 3: Screenshot-only README markdown section
 
 **Files:**
-- Modify: `src/agent_usage/render/markdown.py` (remove chart params, `render_dashboard`, plotly import; add screenshot section)
+- Modify: `src/tomax/render/markdown.py` (remove chart params, `render_dashboard`, plotly import; add screenshot section)
 - Test: `tests/render/test_markdown.py`
 
 **Interfaces:**
 - Consumes: nothing new.
 - Produces:
-  - `DASHBOARD_IMAGE_PATH = "assets/agent-usage/dashboard.png"`
+  - `DASHBOARD_IMAGE_PATH = "assets/tomax/dashboard.png"`
   - `render_dashboard_markdown(*, image_path: str = DASHBOARD_IMAGE_PATH) -> str`
   - `update_readme(existing_readme: str, dashboard_markdown: str) -> str` (unchanged)
   - `render_dashboard` REMOVED.
@@ -370,7 +370,7 @@ git commit -m "feat(dashboard): add playwright screenshot export"
 Replace the body of `tests/render/test_markdown.py` with tests for the new section (keep any `update_readme` idempotence tests, adapting to the new content):
 
 ```python
-from agent_usage.render.markdown import (
+from tomax.render.markdown import (
     DASHBOARD_IMAGE_PATH,
     MARKER_END,
     MARKER_START,
@@ -394,7 +394,7 @@ def test_section_uses_custom_image_path():
 
 
 def test_update_readme_replaces_between_markers_and_is_idempotent():
-    existing = "# Title\n\nintro\n\n<!-- agent-usage:start -->\nOLD\n<!-- agent-usage:end -->\n\nfooter\n"
+    existing = "# Title\n\nintro\n\n<!-- tomax:start -->\nOLD\n<!-- tomax:end -->\n\nfooter\n"
     section = render_dashboard_markdown()
     once = update_readme(existing, section)
     twice = update_readme(once, section)
@@ -415,10 +415,10 @@ Replace the plotly import and the chart-path constants/functions. New relevant p
 ```python
 from __future__ import annotations
 
-MARKER_START = "<!-- agent-usage:start -->"
-MARKER_END = "<!-- agent-usage:end -->"
+MARKER_START = "<!-- tomax:start -->"
+MARKER_END = "<!-- tomax:end -->"
 
-DASHBOARD_IMAGE_PATH = "assets/agent-usage/dashboard.png"
+DASHBOARD_IMAGE_PATH = "assets/tomax/dashboard.png"
 
 
 def render_dashboard_markdown(*, image_path: str = DASHBOARD_IMAGE_PATH) -> str:
@@ -456,7 +456,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/render/markdown.py tests/render/test_markdown.py
+git add src/tomax/render/markdown.py tests/render/test_markdown.py
 git commit -m "feat(render): screenshot-only managed README section"
 ```
 
@@ -465,7 +465,7 @@ git commit -m "feat(render): screenshot-only managed README section"
 ### Task 4: Delete Plotly renderer and its tests
 
 **Files:**
-- Delete: `src/agent_usage/render/plotly.py`
+- Delete: `src/tomax/render/plotly.py`
 - Delete: `tests/render/test_plotly.py`
 
 **Interfaces:**
@@ -476,7 +476,7 @@ git commit -m "feat(render): screenshot-only managed README section"
 
 Run:
 ```bash
-grep -rn "render.plotly\|render import plotly\|from agent_usage.render.plotly" src scripts tests
+grep -rn "render.plotly\|render import plotly\|from tomax.render.plotly" src scripts tests
 ```
 Expected: no matches. If any appear, fix that caller first (it should already be handled by Tasks 3/5/6).
 
@@ -484,7 +484,7 @@ Expected: no matches. If any appear, fix that caller first (it should already be
 
 Run:
 ```bash
-git rm src/agent_usage/render/plotly.py tests/render/test_plotly.py
+git rm src/tomax/render/plotly.py tests/render/test_plotly.py
 ```
 
 - [ ] **Step 3: Run the full test suite**
@@ -503,8 +503,8 @@ git commit -m "chore(render): remove plotly chart renderer"
 ### Task 5: Rewire local `render` command to screenshot export
 
 **Files:**
-- Modify: `src/agent_usage/commands/render.py`
-- Modify: `src/agent_usage/cli.py:98-125` (the `render` command)
+- Modify: `src/tomax/commands/render.py`
+- Modify: `src/tomax/cli.py:98-125` (the `render` command)
 - Test: `tests/render/test_render_command.py` (create if absent; otherwise modify the existing render-command test)
 
 **Interfaces:**
@@ -519,7 +519,7 @@ Create `tests/render/test_render_command.py`:
 from datetime import date
 from pathlib import Path
 
-from agent_usage.commands import render as render_command
+from tomax.commands import render as render_command
 
 
 def test_render_writes_screenshot_and_readme(tmp_path, monkeypatch):
@@ -544,9 +544,9 @@ def test_render_writes_screenshot_and_readme(tmp_path, monkeypatch):
     )
 
     assert calls["export"] == 1
-    assert (out / "assets" / "agent-usage" / "dashboard.png").is_file()
+    assert (out / "assets" / "tomax" / "dashboard.png").is_file()
     readme = (out / "README.md").read_text(encoding="utf-8")
-    assert "assets/agent-usage/dashboard.png" in readme
+    assert "assets/tomax/dashboard.png" in readme
     assert result.changed is True
 
 
@@ -594,10 +594,10 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from agent_usage.dashboard.export import export_dashboard_png
-from agent_usage.ledger.repository import LedgerRepository
-from agent_usage.privacy import PrivacyPolicy
-from agent_usage.render.markdown import (
+from tomax.dashboard.export import export_dashboard_png
+from tomax.ledger.repository import LedgerRepository
+from tomax.privacy import PrivacyPolicy
+from tomax.render.markdown import (
     DASHBOARD_IMAGE_PATH,
     render_dashboard_markdown,
     update_readme,
@@ -674,7 +674,7 @@ Note: `generated_at` is retained in the signature for CLI compatibility even tho
 
 - [ ] **Step 4: Update the CLI `render` command**
 
-In `src/agent_usage/cli.py`, update the `render` command body to pass `ui_dir` and a temp stage dir. Ensure `tempfile` and `dashboard_command` are imported (they already are for `dashboard`). Replace the `render` command body:
+In `src/tomax/cli.py`, update the `render` command body to pass `ui_dir` and a temp stage dir. Ensure `tempfile` and `dashboard_command` are imported (they already are for `dashboard`). Replace the `render` command body:
 
 ```python
 @app.command()
@@ -697,7 +697,7 @@ def render(
     now = datetime.now(timezone.utc)
     config = load_config(config_file_path())
     resolved_output_dir = output_dir or (ledger_file_path().parent / "preview")
-    with tempfile.TemporaryDirectory(prefix="agent-usage-render-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tomax-render-") as tmp:
         result = render_command.render(
             ledger_path=ledger_file_path(),
             output_dir=resolved_output_dir,
@@ -709,9 +709,9 @@ def render(
             pie_top_n=pie_top_n,
             force_build=rebuild,
         )
-    typer.echo(f"agent-usage: preview written to {result.readme_path}")
+    typer.echo(f"tomax: preview written to {result.readme_path}")
     typer.echo(
-        "agent-usage: dashboard changed" if result.changed else "agent-usage: dashboard unchanged"
+        "tomax: dashboard changed" if result.changed else "tomax: dashboard unchanged"
     )
 ```
 
@@ -722,13 +722,13 @@ Expected: PASS (2 tests).
 
 - [ ] **Step 6: Smoke-check the CLI wiring imports**
 
-Run: `uv run python -c "from agent_usage import cli; print('ok')"`
+Run: `uv run python -c "from tomax import cli; print('ok')"`
 Expected: prints `ok`.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agent_usage/commands/render.py src/agent_usage/cli.py tests/render/test_render_command.py
+git add src/tomax/commands/render.py src/tomax/cli.py tests/render/test_render_command.py
 git commit -m "feat(render): produce dashboard screenshot in render command"
 ```
 
@@ -768,7 +768,7 @@ def test_build_writes_readme_and_png(tmp_path, monkeypatch):
     monkeypatch.setattr(bpd, "ensure_build", lambda ui_dir, force=False: ui_dir)
 
     readme = tmp_path / "README.md"
-    png = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    png = tmp_path / "assets" / "tomax" / "dashboard.png"
     changed = bpd.build(
         data_dir=tmp_path / "data" / "v1" / "devices",
         readme_path=readme,
@@ -780,7 +780,7 @@ def test_build_writes_readme_and_png(tmp_path, monkeypatch):
 
     assert changed is True
     assert png.is_file()
-    assert "assets/agent-usage/dashboard.png" in readme.read_text(encoding="utf-8")
+    assert "assets/tomax/dashboard.png" in readme.read_text(encoding="utf-8")
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -800,11 +800,11 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from agent_usage.aggregate import validate_and_partition
-from agent_usage.dashboard.export import screenshot_payload
-from agent_usage.dashboard.ui_build import ensure_build
-from agent_usage.render.dashboard_data import build_dashboard_data
-from agent_usage.render.markdown import (
+from tomax.aggregate import validate_and_partition
+from tomax.dashboard.export import screenshot_payload
+from tomax.dashboard.ui_build import ensure_build
+from tomax.render.dashboard_data import build_dashboard_data
+from tomax.render.markdown import (
     DASHBOARD_IMAGE_PATH,
     render_dashboard_markdown,
     update_readme,
@@ -813,7 +813,7 @@ from agent_usage.render.markdown import (
 DEFAULT_DATA_DIR = Path("data/v1/devices")
 DEFAULT_README = Path("README.md")
 DEFAULT_DASHBOARD_PNG = Path(DASHBOARD_IMAGE_PATH)
-DEFAULT_UI_DIR = Path(".agent-usage-src/dashboard-ui")
+DEFAULT_UI_DIR = Path(".tomax-src/dashboard-ui")
 
 
 # _load_entries(...) is kept unchanged from the current script.
@@ -859,7 +859,7 @@ def build(
     partition = validate_and_partition(entries, today=today)
     for issue in partition.issues:
         print(
-            f"agent-usage: skipping invalid record "
+            f"tomax: skipping invalid record "
             f"device={issue.device_id} date={issue.date} reason={issue.reason}",
             file=sys.stderr,
         )
@@ -906,7 +906,7 @@ def main(argv: list[str] | None = None) -> int:
         generated_at=generated_at,
         pie_top_n=args.pie_top_n,
     )
-    print("agent-usage: dashboard changed" if changed else "agent-usage: dashboard unchanged")
+    print("tomax: dashboard changed" if changed else "tomax: dashboard unchanged")
     return 0
 
 
@@ -923,7 +923,7 @@ Expected: PASS.
 
 - [ ] **Step 5: Update the workflow template**
 
-In `templates/github-workflow.yml`, update the header comment (README + `assets/agent-usage/dashboard.png`), and rewrite the build steps after "Check out agent-usage collector":
+In `templates/github-workflow.yml`, update the header comment (README + `assets/tomax/dashboard.png`), and rewrite the build steps after "Check out tomax collector":
 
 ```yaml
       - name: Set up Python
@@ -939,30 +939,30 @@ In `templates/github-workflow.yml`, update the header comment (README + `assets/
       - name: Enable pnpm
         run: corepack enable
 
-      - name: Install agent-usage
-        run: pip install ./.agent-usage-src
+      - name: Install tomax
+        run: pip install ./.tomax-src
 
       - name: Install Chromium for Playwright
         run: python -m playwright install --with-deps chromium
 
       - name: Validate public records and render dashboard
         run: |
-          python .agent-usage-src/scripts/build_profile_dashboard.py \
+          python .tomax-src/scripts/build_profile_dashboard.py \
             --data-dir data/v1/devices \
             --readme README.md \
-            --dashboard-png assets/agent-usage/dashboard.png \
-            --ui-dir .agent-usage-src/dashboard-ui
+            --dashboard-png assets/tomax/dashboard.png \
+            --ui-dir .tomax-src/dashboard-ui
 
       - name: Commit and push if the dashboard changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md assets/agent-usage/dashboard.png
+          git add README.md assets/tomax/dashboard.png
           if git status --porcelain | grep -q .; then
             git commit -m "chore: update agent usage dashboard"
             git push origin HEAD:${{ github.ref_name }}
           else
-            echo "agent-usage: nothing to commit"
+            echo "tomax: nothing to commit"
           fi
 ```
 
@@ -1006,7 +1006,7 @@ Expected: a list of references to update.
 
 - [ ] **Step 2: Update prose**
 
-Edit each hit to describe the single screenshot pipeline (`assets/agent-usage/dashboard.png`, Playwright/Chromium) instead of Plotly PNG charts. Keep changes minimal and factual.
+Edit each hit to describe the single screenshot pipeline (`assets/tomax/dashboard.png`, Playwright/Chromium) instead of Plotly PNG charts. Keep changes minimal and factual.
 
 - [ ] **Step 3: Verify no code references remain**
 

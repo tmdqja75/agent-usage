@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from agent_usage.models import (
+from tomax.models import (
     NormalizedUsageRecord,
     SourceStatus,
     SupportedAgent,

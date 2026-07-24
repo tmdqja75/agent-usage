@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_usage.schedule import launchd
+from tomax.schedule import launchd
 
 
 def _fake_runner(returncode: int = 0):
@@ -33,7 +33,7 @@ def _fake_runner(returncode: int = 0):
 
 def test_build_plist_sets_the_label_and_calendar_interval(tmp_path: Path) -> None:
     plist = launchd.build_plist(
-        executable="/usr/local/bin/agent-usage", daily_at="09:30", log_dir=tmp_path / "logs"
+        executable="/usr/local/bin/tomax", daily_at="09:30", log_dir=tmp_path / "logs"
     )
 
     assert plist["Label"] == launchd.LABEL
@@ -42,7 +42,7 @@ def test_build_plist_sets_the_label_and_calendar_interval(tmp_path: Path) -> Non
 
 def test_build_plist_runs_collect_then_publish_via_the_given_executable(tmp_path: Path) -> None:
     plist = launchd.build_plist(
-        executable="/usr/local/bin/agent-usage", daily_at="09:00", log_dir=tmp_path / "logs"
+        executable="/usr/local/bin/tomax", daily_at="09:00", log_dir=tmp_path / "logs"
     )
 
     program_arguments = plist["ProgramArguments"]
@@ -50,11 +50,11 @@ def test_build_plist_runs_collect_then_publish_via_the_given_executable(tmp_path
     assert program_arguments[1] == "-c"
     assert program_arguments[2] == '"$1" collect && "$1" publish'
     assert program_arguments[3] == launchd.LABEL
-    assert program_arguments[4] == "/usr/local/bin/agent-usage"
+    assert program_arguments[4] == "/usr/local/bin/tomax"
 
 
 def test_build_plist_passes_an_unusual_executable_as_an_argument_not_shell_code(tmp_path: Path) -> None:
-    executable = '/Applications/Agent Usage/bin/agent-usage; echo unsafe'
+    executable = '/Applications/Agent Usage/bin/tomax; echo unsafe'
 
     plist = launchd.build_plist(executable=executable, daily_at="09:00", log_dir=tmp_path / "logs")
 
@@ -64,7 +64,7 @@ def test_build_plist_passes_an_unusual_executable_as_an_argument_not_shell_code(
 
 def test_build_plist_does_not_run_immediately_on_load(tmp_path: Path) -> None:
     plist = launchd.build_plist(
-        executable="/usr/local/bin/agent-usage", daily_at="09:00", log_dir=tmp_path / "logs"
+        executable="/usr/local/bin/tomax", daily_at="09:00", log_dir=tmp_path / "logs"
     )
 
     assert plist["RunAtLoad"] is False
@@ -74,7 +74,7 @@ def test_build_plist_points_logs_at_the_given_directory(tmp_path: Path) -> None:
     log_dir = tmp_path / "logs"
 
     plist = launchd.build_plist(
-        executable="/usr/local/bin/agent-usage", daily_at="09:00", log_dir=log_dir
+        executable="/usr/local/bin/tomax", daily_at="09:00", log_dir=log_dir
     )
 
     assert plist["StandardOutPath"] == str(log_dir / "scheduler.log")
@@ -84,7 +84,7 @@ def test_build_plist_points_logs_at_the_given_directory(tmp_path: Path) -> None:
 
 def test_build_plist_rejects_an_out_of_range_time(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="HH:MM"):
-        launchd.build_plist(executable="agent-usage", daily_at="25:00", log_dir=tmp_path / "logs")
+        launchd.build_plist(executable="tomax", daily_at="25:00", log_dir=tmp_path / "logs")
 
 
 # --- write_plist / read_plist round trip --------------------------------
@@ -92,7 +92,7 @@ def test_build_plist_rejects_an_out_of_range_time(tmp_path: Path) -> None:
 
 def test_write_and_read_plist_round_trips(tmp_path: Path) -> None:
     target = tmp_path / "test.plist"
-    plist = launchd.build_plist(executable="agent-usage", daily_at="09:00", log_dir=tmp_path / "logs")
+    plist = launchd.build_plist(executable="tomax", daily_at="09:00", log_dir=tmp_path / "logs")
 
     launchd.write_plist(target, plist)
     loaded = launchd.read_plist(target)
@@ -112,7 +112,7 @@ def test_install_writes_the_plist_and_loads_it(tmp_path: Path, monkeypatch) -> N
     runner = _fake_runner()
 
     target = launchd.install(
-        executable="agent-usage", daily_at="09:00", log_dir=tmp_path / "logs", runner=runner
+        executable="tomax", daily_at="09:00", log_dir=tmp_path / "logs", runner=runner
     )
 
     assert target == tmp_path / "LaunchAgents" / f"{launchd.LABEL}.plist"
@@ -126,7 +126,7 @@ def test_install_removes_a_new_plist_when_launchctl_load_fails(tmp_path: Path, m
 
     with pytest.raises(launchd.LaunchctlError, match="load"):
         launchd.install(
-            executable="agent-usage",
+            executable="tomax",
             daily_at="09:00",
             log_dir=tmp_path / "logs",
             runner=_fake_runner(returncode=1),
@@ -139,7 +139,7 @@ def test_remove_unloads_and_deletes_an_existing_plist(tmp_path: Path, monkeypatc
     monkeypatch.setattr(launchd, "launch_agents_dir", lambda: tmp_path / "LaunchAgents")
     install_runner = _fake_runner()
     target = launchd.install(
-        executable="agent-usage", daily_at="09:00", log_dir=tmp_path / "logs", runner=install_runner
+        executable="tomax", daily_at="09:00", log_dir=tmp_path / "logs", runner=install_runner
     )
     remove_runner = _fake_runner()
 
@@ -153,7 +153,7 @@ def test_remove_unloads_and_deletes_an_existing_plist(tmp_path: Path, monkeypatc
 def test_remove_preserves_the_plist_when_launchctl_unload_fails(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(launchd, "launch_agents_dir", lambda: tmp_path / "LaunchAgents")
     target = launchd.install(
-        executable="agent-usage", daily_at="09:00", log_dir=tmp_path / "logs", runner=_fake_runner()
+        executable="tomax", daily_at="09:00", log_dir=tmp_path / "logs", runner=_fake_runner()
     )
 
     with pytest.raises(launchd.LaunchctlError, match="unload"):
@@ -185,7 +185,7 @@ def test_status_reports_not_installed_when_no_plist_exists(tmp_path: Path, monke
 def test_status_reports_installed_and_loaded(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(launchd, "launch_agents_dir", lambda: tmp_path / "LaunchAgents")
     launchd.install(
-        executable="agent-usage", daily_at="14:45", log_dir=tmp_path / "logs", runner=_fake_runner()
+        executable="tomax", daily_at="14:45", log_dir=tmp_path / "logs", runner=_fake_runner()
     )
 
     result = launchd.status(runner=_fake_runner(returncode=0))
@@ -198,7 +198,7 @@ def test_status_reports_installed_and_loaded(tmp_path: Path, monkeypatch) -> Non
 def test_status_reports_installed_but_not_loaded(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(launchd, "launch_agents_dir", lambda: tmp_path / "LaunchAgents")
     launchd.install(
-        executable="agent-usage", daily_at="09:00", log_dir=tmp_path / "logs", runner=_fake_runner()
+        executable="tomax", daily_at="09:00", log_dir=tmp_path / "logs", runner=_fake_runner()
     )
 
     result = launchd.status(runner=_fake_runner(returncode=1))

@@ -1,16 +1,16 @@
 # Regenerates the managed Agent Usage dashboard section in README.md
-# (screenshotting the interactive dashboard to assets/agent-usage/dashboard.png)
+# (screenshotting the interactive dashboard to assets/tomax/dashboard.png)
 # whenever a device pushes new sanitized daily aggregates.
 #
-# Install this file as .github/workflows/agent-usage-dashboard.yml in your
+# Install this file as .github/workflows/tomax-dashboard.yml in your
 # GitHub profile repository (e.g. <you>/<you>). It does not belong in the
-# agent-usage collector repository itself.
+# tomax collector repository itself.
 #
 # Trigger scope is deliberately narrow:
 #   - only direct pushes to the default branch (no pull_request, so a fork
 #     opening a PR can never run with this workflow's contents: write token)
 #   - only when files under data/v1/** change
-# The generated README.md and assets/agent-usage/** are never listed in
+# The generated README.md and assets/tomax/** are never listed in
 # `paths` above, so this workflow's own commits never re-trigger it.
 name: Update Agent Usage Dashboard
 
@@ -27,7 +27,7 @@ permissions:
 # Serialize runs so two devices pushing around the same time never race to
 # commit the dashboard; never cancel a run mid-way through a commit/push.
 concurrency:
-  group: agent-usage-dashboard
+  group: tomax-dashboard
   cancel-in-progress: false
 
 jobs:
@@ -41,14 +41,14 @@ jobs:
       - name: Check out profile repository
         uses: actions/checkout@v4
 
-      - name: Check out agent-usage collector
+      - name: Check out tomax collector
         uses: actions/checkout@v4
         with:
-          repository: tmdqja75/agent-usage
-          # Pin this to a released tag once agent-usage starts publishing
+          repository: tmdqja75/tomax
+          # Pin this to a released tag once tomax starts publishing
           # tagged releases; 'main' is a bootstrap default.
           ref: ${{ vars.AGENT_USAGE_REF || 'main' }}
-          path: .agent-usage-src
+          path: .tomax-src
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -63,28 +63,28 @@ jobs:
       - name: Enable pnpm
         run: corepack enable
 
-      - name: Install agent-usage
-        run: pip install ./.agent-usage-src
+      - name: Install tomax
+        run: pip install ./.tomax-src
 
       - name: Install Chromium for Playwright
         run: python -m playwright install --with-deps chromium
 
       - name: Validate public records and render dashboard
         run: |
-          python .agent-usage-src/scripts/build_profile_dashboard.py \
+          python .tomax-src/scripts/build_profile_dashboard.py \
             --data-dir data/v1/devices \
             --readme README.md \
-            --dashboard-png assets/agent-usage/dashboard.png \
-            --ui-dir .agent-usage-src/dashboard-ui
+            --dashboard-png assets/tomax/dashboard.png \
+            --ui-dir .tomax-src/dashboard-ui
 
       - name: Commit and push if the dashboard changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md assets/agent-usage/dashboard.png
+          git add README.md assets/tomax/dashboard.png
           if git status --porcelain | grep -q .; then
             git commit -m "chore: update agent usage dashboard"
             git push origin HEAD:${{ github.ref_name }}
           else
-            echo "agent-usage: nothing to commit"
+            echo "tomax: nothing to commit"
           fi

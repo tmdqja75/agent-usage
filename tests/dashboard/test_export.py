@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_usage.dashboard import export
+from tomax.dashboard import export
 
 
 def test_url_allowed_accepts_matching_prefix():
@@ -67,7 +67,7 @@ def test_export_writes_png(tmp_path):
     from datetime import date as _date
     from pathlib import Path
 
-    from agent_usage.privacy import PrivacyPolicy
+    from tomax.privacy import PrivacyPolicy
 
     repo_root = Path(__file__).resolve().parents[2]
     out = tmp_path / "dashboard.png"

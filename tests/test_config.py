@@ -8,7 +8,7 @@ import pytest
 
 from datetime import datetime, timezone
 
-from agent_usage.config import (
+from tomax.config import (
     AppConfig,
     config_dir,
     config_file_path,
@@ -19,14 +19,14 @@ from agent_usage.config import (
     resolve_initial_collection_start,
     save_config,
 )
-from agent_usage.time_window import DEFAULT_INITIAL_START, EPOCH_START
+from tomax.time_window import DEFAULT_INITIAL_START, EPOCH_START
 
 UTC = timezone.utc
 
 
 def test_config_dir_and_data_dir_are_scoped_to_this_app() -> None:
-    assert "agent-usage" in str(config_dir()).lower()
-    assert "agent-usage" in str(data_dir()).lower()
+    assert "tomax" in str(config_dir()).lower()
+    assert "tomax" in str(data_dir()).lower()
 
 
 def test_config_file_and_ledger_file_paths_live_under_their_app_dirs() -> None:
@@ -153,7 +153,7 @@ def test_get_or_create_device_id_differs_across_separate_installs(tmp_path) -> N
 def test_get_or_create_device_id_works_on_a_fresh_install_with_no_app_dir_yet(
     tmp_path,
 ) -> None:
-    fresh_install_path = tmp_path / "Application Support" / "agent-usage" / "ledger.sqlite3"
+    fresh_install_path = tmp_path / "Application Support" / "tomax" / "ledger.sqlite3"
 
     device_id = get_or_create_device_id(fresh_install_path)
 

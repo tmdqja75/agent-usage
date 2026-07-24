@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_usage.dashboard import ui_build
+from tomax.dashboard import ui_build
 
 
 def test_ensure_build_skips_when_fresh(tmp_path):

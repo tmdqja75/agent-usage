@@ -39,7 +39,7 @@ def test_ensure_build_runs_install_and_build_when_missing(tmp_path, monkeypatch)
 
     assert (result / "index.html").is_file()
     assert ["pnpm", "install"] in ran
-    assert ["pnpm", "build"] in ran
+    assert ["pnpm", "run", "build"] in ran
 
 
 def test_ensure_build_raises_on_build_failure(tmp_path, monkeypatch):

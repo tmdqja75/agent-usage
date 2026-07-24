@@ -120,17 +120,26 @@ def test_workflow_only_commits_when_something_changed() -> None:
 # --- scripts/build_profile_dashboard.py -------------------------------------
 
 
-def test_build_generates_readme_with_dashboard_section(tmp_path: Path) -> None:
+def test_build_generates_readme_and_chart_assets(tmp_path: Path) -> None:
     data_dir = tmp_path / "data" / "v1" / "devices"
     _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
     readme_path = tmp_path / "README.md"
     readme_path.write_text("# My Profile\n\nIntro text.\n", encoding="utf-8")
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    charts_dir = tmp_path / "assets" / "agent-usage"
+    rolling_chart = charts_dir / "token-activity-14d.png"
+    total_chart = charts_dir / "token-activity-total.png"
+    agent_share_chart = charts_dir / "agent-share.png"
+    skills_chart = charts_dir / "skills.png"
+    mcp_chart = charts_dir / "mcp.png"
 
     changed = build_profile_dashboard.build(
         data_dir=data_dir,
         readme_path=readme_path,
-        dashboard_path=dashboard_path,
+        rolling_chart_path=rolling_chart,
+        total_chart_path=total_chart,
+        agent_share_chart_path=agent_share_chart,
+        skills_chart_path=skills_chart,
+        mcp_chart_path=mcp_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
@@ -138,19 +147,26 @@ def test_build_generates_readme_with_dashboard_section(tmp_path: Path) -> None:
     assert changed is True
     assert "# My Profile" in readme_path.read_text(encoding="utf-8")
     assert "agent-usage:start" in readme_path.read_text(encoding="utf-8")
-    assert "assets/agent-usage/dashboard.png" in readme_path.read_text(encoding="utf-8")
+    png_signature = b"\x89PNG\r\n\x1a\n"
+    assert rolling_chart.read_bytes().startswith(png_signature)
+    assert total_chart.read_bytes().startswith(png_signature)
+    assert agent_share_chart.read_bytes().startswith(png_signature)
+    assert skills_chart.read_bytes().startswith(png_signature)
+    assert mcp_chart.read_bytes().startswith(png_signature)
 
 
 def test_build_is_idempotent_on_unchanged_input(tmp_path: Path) -> None:
     data_dir = tmp_path / "data" / "v1" / "devices"
     _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
     readme_path = tmp_path / "README.md"
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
+    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
 
     kwargs = dict(
         data_dir=data_dir,
         readme_path=readme_path,
-        dashboard_path=dashboard_path,
+        rolling_chart_path=rolling_chart,
+        lifetime_chart_path=lifetime_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
@@ -168,12 +184,14 @@ def test_build_skips_malformed_records_and_reports_diagnostics(tmp_path: Path, c
     bad_dir.mkdir(parents=True, exist_ok=True)
     (bad_dir / "2026-07-10.json").write_text("not valid json{{{", encoding="utf-8")
     readme_path = tmp_path / "README.md"
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
+    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
 
     changed = build_profile_dashboard.build(
         data_dir=data_dir,
         readme_path=readme_path,
-        dashboard_path=dashboard_path,
+        rolling_chart_path=rolling_chart,
+        lifetime_chart_path=lifetime_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
@@ -192,12 +210,14 @@ def test_build_skips_a_non_utf8_record_file_without_crashing(tmp_path: Path, cap
     bad_dir.mkdir(parents=True, exist_ok=True)
     (bad_dir / "2026-07-10.json").write_bytes(b"\xff\xfe\x00not utf-8")
     readme_path = tmp_path / "README.md"
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
+    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
 
     changed = build_profile_dashboard.build(
         data_dir=data_dir,
         readme_path=readme_path,
-        dashboard_path=dashboard_path,
+        rolling_chart_path=rolling_chart,
+        lifetime_chart_path=lifetime_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
@@ -215,12 +235,14 @@ def test_build_never_leaks_device_ids_or_fingerprints_into_readme(tmp_path: Path
         _valid_payload(device_id="device-super-secret-id", day=date(2026, 7, 10)),
     )
     readme_path = tmp_path / "README.md"
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
+    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
 
     build_profile_dashboard.build(
         data_dir=data_dir,
         readme_path=readme_path,
-        dashboard_path=dashboard_path,
+        rolling_chart_path=rolling_chart,
+        lifetime_chart_path=lifetime_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
@@ -231,18 +253,20 @@ def test_build_never_leaks_device_ids_or_fingerprints_into_readme(tmp_path: Path
 def test_build_handles_missing_data_dir_without_crashing(tmp_path: Path) -> None:
     data_dir = tmp_path / "data" / "v1" / "devices"  # never created
     readme_path = tmp_path / "README.md"
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
+    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
 
     changed = build_profile_dashboard.build(
         data_dir=data_dir,
         readme_path=readme_path,
-        dashboard_path=dashboard_path,
+        rolling_chart_path=rolling_chart,
+        lifetime_chart_path=lifetime_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
 
     assert changed is True
-    assert "## Agent Usage" in readme_path.read_text(encoding="utf-8")
+    assert "## Token Usage" in readme_path.read_text(encoding="utf-8")
 
 
 def test_build_rejects_future_dated_records_without_crashing(tmp_path: Path, capsys) -> None:
@@ -252,12 +276,14 @@ def test_build_rejects_future_dated_records_without_crashing(tmp_path: Path, cap
         _valid_payload(device_id="device-a", day=date(2026, 7, 30)),
     )
     readme_path = tmp_path / "README.md"
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    rolling_chart = tmp_path / "assets" / "agent-usage" / "rolling-14d.svg"
+    lifetime_chart = tmp_path / "assets" / "agent-usage" / "lifetime.svg"
 
     build_profile_dashboard.build(
         data_dir=data_dir,
         readme_path=readme_path,
-        dashboard_path=dashboard_path,
+        rolling_chart_path=rolling_chart,
+        lifetime_chart_path=lifetime_chart,
         today=date(2026, 7, 18),
         generated_at="2026-07-18 00:00 UTC",
     )
@@ -270,7 +296,8 @@ def test_main_accepts_cli_arguments_and_exits_zero(tmp_path: Path, monkeypatch) 
     data_dir = tmp_path / "data" / "v1" / "devices"
     _write_device_record(data_dir, "device-a", date(2026, 7, 10), _valid_payload(device_id="device-a", day=date(2026, 7, 10)))
     readme_path = tmp_path / "README.md"
-    dashboard_path = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    rolling_chart = tmp_path / "assets" / "rolling.svg"
+    lifetime_chart = tmp_path / "assets" / "lifetime.svg"
 
     exit_code = build_profile_dashboard.main(
         [
@@ -278,8 +305,10 @@ def test_main_accepts_cli_arguments_and_exits_zero(tmp_path: Path, monkeypatch) 
             str(data_dir),
             "--readme",
             str(readme_path),
-            "--dashboard",
-            str(dashboard_path),
+            "--rolling-chart",
+            str(rolling_chart),
+            "--lifetime-chart",
+            str(lifetime_chart),
             "--today",
             "2026-07-18",
             "--generated-at",
@@ -289,4 +318,6 @@ def test_main_accepts_cli_arguments_and_exits_zero(tmp_path: Path, monkeypatch) 
 
     assert exit_code == 0
     assert readme_path.exists()
-    assert "assets/agent-usage/dashboard.png" in readme_path.read_text(encoding="utf-8")
+    assert (tmp_path / "assets" / "agent-usage" / "agent-share.png").exists()
+    assert (tmp_path / "assets" / "agent-usage" / "skills.png").exists()
+    assert (tmp_path / "assets" / "agent-usage" / "mcp.png").exists()

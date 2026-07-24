@@ -30,7 +30,7 @@ def _insert_record(ledger_path, **overrides) -> None:
         repository.close()
 
 
-def test_render_writes_a_readme_with_dashboard_reference(tmp_path) -> None:
+def test_render_writes_a_readme_and_chart_assets(tmp_path) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     _insert_record(ledger_path)
     output_dir = tmp_path / "preview"
@@ -43,7 +43,17 @@ def test_render_writes_a_readme_with_dashboard_reference(tmp_path) -> None:
     assert result.readme_path.exists()
     readme = result.readme_path.read_text(encoding="utf-8")
     assert "agent-usage:start" in readme
-    assert "assets/agent-usage/dashboard.png" in readme
+    assert "assets/agent-usage/token-activity-14d.png" in readme
+    assert "assets/agent-usage/token-activity-total.png" in readme
+    assert "assets/agent-usage/agent-share.png" in readme
+    assert "assets/agent-usage/skills.png" in readme
+    assert "assets/agent-usage/mcp.png" in readme
+    assets_dir = output_dir / "assets" / "agent-usage"
+    assert (assets_dir / "token-activity-14d.png").exists()
+    assert (assets_dir / "token-activity-total.png").exists()
+    assert (assets_dir / "agent-share.png").exists()
+    assert (assets_dir / "skills.png").exists()
+    assert (assets_dir / "mcp.png").exists()
 
 
 def test_render_honors_a_custom_pie_top_n(tmp_path) -> None:
@@ -98,7 +108,7 @@ def test_render_handles_an_empty_ledger_without_crashing(tmp_path) -> None:
         ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT
     )
 
-    assert "## Agent Usage" in result.readme_path.read_text(encoding="utf-8")
+    assert "## Token Usage" in result.readme_path.read_text(encoding="utf-8")
 
 
 def test_render_applies_the_privacy_policy_to_skill_and_mcp_names(tmp_path) -> None:

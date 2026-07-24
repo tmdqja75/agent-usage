@@ -16,6 +16,7 @@ from pathlib import Path
 from agent_usage.dashboard.export import export_dashboard_png
 from agent_usage.ledger.repository import LedgerRepository
 from agent_usage.privacy import PrivacyPolicy
+from agent_usage.public_data import stage_daily_records
 from agent_usage.render.markdown import (
     DASHBOARD_IMAGE_PATH,
     render_dashboard_markdown,
@@ -59,8 +60,14 @@ def render(
     repository = LedgerRepository.open(ledger_path)
     try:
         device_id = repository.get_or_create_device_id()
+        records = repository.list_records()
     finally:
         repository.close()
+
+    device_data_dir = output_dir / "data" / "v1" / "devices" / device_id
+    stage_daily_records(
+        device_data_dir, device_id=device_id, records=records, privacy_policy=privacy_policy
+    )
 
     screenshot_path = output_dir / DASHBOARD_IMAGE_PATH
     tmp_png = screenshot_path.parent / ".dashboard.png.tmp"

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+from pathlib import Path
 
+from agent_usage.commands import render as render_command
 from agent_usage.commands.render import render
 from agent_usage.ledger.repository import LedgerRepository
 from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
@@ -30,38 +32,48 @@ def _insert_record(ledger_path, **overrides) -> None:
         repository.close()
 
 
-def test_render_writes_a_readme_and_chart_assets(tmp_path) -> None:
+def _fake_export(output_path, **kwargs):
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(b"\x89PNG\r\n\x1a\nFAKE")
+
+
+def _render(monkeypatch, tmp_path, **kwargs):
+    monkeypatch.setattr(render_command, "export_dashboard_png", _fake_export)
+    kwargs.setdefault("ui_dir", Path("dashboard-ui"))
+    kwargs.setdefault("tmp_stage_dir", tmp_path / "stage")
+    return render(**kwargs)
+
+
+def test_render_writes_a_readme_and_dashboard_screenshot(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     _insert_record(ledger_path)
     output_dir = tmp_path / "preview"
 
-    result = render(
-        ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT
+    result = _render(
+        monkeypatch,
+        tmp_path,
+        ledger_path=ledger_path,
+        output_dir=output_dir,
+        today=TODAY,
+        generated_at=GENERATED_AT,
     )
 
     assert result.changed is True
     assert result.readme_path.exists()
     readme = result.readme_path.read_text(encoding="utf-8")
     assert "agent-usage:start" in readme
-    assert "assets/agent-usage/token-activity-14d.png" in readme
-    assert "assets/agent-usage/token-activity-total.png" in readme
-    assert "assets/agent-usage/agent-share.png" in readme
-    assert "assets/agent-usage/skills.png" in readme
-    assert "assets/agent-usage/mcp.png" in readme
-    assets_dir = output_dir / "assets" / "agent-usage"
-    assert (assets_dir / "token-activity-14d.png").exists()
-    assert (assets_dir / "token-activity-total.png").exists()
-    assert (assets_dir / "agent-share.png").exists()
-    assert (assets_dir / "skills.png").exists()
-    assert (assets_dir / "mcp.png").exists()
+    assert "assets/agent-usage/dashboard.png" in readme
+    assert (output_dir / "assets" / "agent-usage" / "dashboard.png").exists()
 
 
-def test_render_honors_a_custom_pie_top_n(tmp_path) -> None:
+def test_render_honors_a_custom_pie_top_n(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     _insert_record(ledger_path)
     output_dir = tmp_path / "preview"
 
-    result = render(
+    result = _render(
+        monkeypatch,
+        tmp_path,
         ledger_path=ledger_path,
         output_dir=output_dir,
         today=TODAY,
@@ -72,20 +84,25 @@ def test_render_honors_a_custom_pie_top_n(tmp_path) -> None:
     assert result.changed is True
 
 
-def test_render_stages_a_public_daily_record_for_this_device(tmp_path) -> None:
+def test_render_stages_a_public_daily_record_for_this_device(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     _insert_record(ledger_path)
     output_dir = tmp_path / "preview"
 
-    result = render(
-        ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT
+    result = _render(
+        monkeypatch,
+        tmp_path,
+        ledger_path=ledger_path,
+        output_dir=output_dir,
+        today=TODAY,
+        generated_at=GENERATED_AT,
     )
 
     staged = output_dir / "data" / "v1" / "devices" / result.device_id / "2026-07-10.json"
     assert staged.exists()
 
 
-def test_render_is_idempotent_on_unchanged_ledger_data(tmp_path) -> None:
+def test_render_is_idempotent_on_unchanged_ledger_data(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     _insert_record(ledger_path)
     output_dir = tmp_path / "preview"
@@ -93,25 +110,30 @@ def test_render_is_idempotent_on_unchanged_ledger_data(tmp_path) -> None:
         ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT
     )
 
-    first = render(**kwargs)
-    second = render(**kwargs)
+    first = _render(monkeypatch, tmp_path, **kwargs)
+    second = _render(monkeypatch, tmp_path, **kwargs)
 
     assert first.changed is True
     assert second.changed is False
 
 
-def test_render_handles_an_empty_ledger_without_crashing(tmp_path) -> None:
+def test_render_handles_an_empty_ledger_without_crashing(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     output_dir = tmp_path / "preview"
 
-    result = render(
-        ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT
+    result = _render(
+        monkeypatch,
+        tmp_path,
+        ledger_path=ledger_path,
+        output_dir=output_dir,
+        today=TODAY,
+        generated_at=GENERATED_AT,
     )
 
-    assert "## Token Usage" in result.readme_path.read_text(encoding="utf-8")
+    assert "## Agent Usage" in result.readme_path.read_text(encoding="utf-8")
 
 
-def test_render_applies_the_privacy_policy_to_skill_and_mcp_names(tmp_path) -> None:
+def test_render_applies_the_privacy_policy_to_skill_and_mcp_names(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     _insert_record(
         ledger_path,
@@ -123,7 +145,14 @@ def test_render_applies_the_privacy_policy_to_skill_and_mcp_names(tmp_path) -> N
     )
     output_dir = tmp_path / "preview"
 
-    render(ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT)
+    _render(
+        monkeypatch,
+        tmp_path,
+        ledger_path=ledger_path,
+        output_dir=output_dir,
+        today=TODAY,
+        generated_at=GENERATED_AT,
+    )
 
     staged_files = list((output_dir / "data" / "v1" / "devices").glob("*/2026-07-10.json"))
     assert staged_files
@@ -132,15 +161,20 @@ def test_render_applies_the_privacy_policy_to_skill_and_mcp_names(tmp_path) -> N
     assert "(hidden)" in content
 
 
-def test_render_preserves_existing_readme_content_outside_the_markers(tmp_path) -> None:
+def test_render_preserves_existing_readme_content_outside_the_markers(tmp_path, monkeypatch) -> None:
     ledger_path = tmp_path / "ledger.sqlite3"
     _insert_record(ledger_path)
     output_dir = tmp_path / "preview"
     output_dir.mkdir(parents=True)
     (output_dir / "README.md").write_text("# My Profile\n\nIntro text.\n", encoding="utf-8")
 
-    result = render(
-        ledger_path=ledger_path, output_dir=output_dir, today=TODAY, generated_at=GENERATED_AT
+    result = _render(
+        monkeypatch,
+        tmp_path,
+        ledger_path=ledger_path,
+        output_dir=output_dir,
+        today=TODAY,
+        generated_at=GENERATED_AT,
     )
 
     text = result.readme_path.read_text(encoding="utf-8")

@@ -1,12 +1,21 @@
 """Pull local agent usage into the private ledger.
 
 Each agent's collection window runs from its last checkpoint up to
-``now``, or — on an agent's first-ever collection — exactly the
-requested initial two-week backfill (2026-07-04 through 2026-07-18),
-never further, so a first run never turns into an unrequested historic
-scan. ``now`` must always be supplied by the caller rather than computed
-here, the same explicit-time convention used throughout this project
-(see e.g. ``render_dashboard``'s ``today``/``generated_at``), so
+``now``, or — on an agent's first-ever collection — from the configured
+initial start (``config.initial_collection_start``, default 2026-07-04,
+resolved via ``resolve_initial_collection_start``) up to ``now``.
+
+If the configured start predates an agent's earliest already-collected
+record, an additional backfill window covers that gap — appending older
+history without moving the forward checkpoint. A per-agent probe marker
+(``LedgerRepository.get/set_backfill_probed_start``) records how far a
+backfill has already scanned, so once a run confirms there is nothing
+earlier than the configured start (including implicitly, via a
+first-ever run's forward window already starting there), later runs
+with the same configured start don't rescan it. ``now`` must always be
+supplied by the caller rather than
+computed here, the same explicit-time convention used throughout this
+project (see e.g. ``render_dashboard``'s ``today``/``generated_at``), so
 collection stays deterministic and testable.
 """
 
@@ -20,7 +29,7 @@ from pathlib import Path
 from agent_usage.adapters import claude_code, codex, hermes
 from agent_usage.ledger.repository import LedgerRepository
 from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent
-from agent_usage.time_window import INITIAL_COLLECTION_WINDOW, TimeWindow
+from agent_usage.time_window import DEFAULT_INITIAL_START, TimeWindow
 
 DEFAULT_HERMES_STATE_DB = Path.home() / ".hermes" / "state.db"
 DEFAULT_CLAUDE_CODE_PROJECTS_DIR = Path.home() / ".claude" / "projects"
@@ -67,27 +76,52 @@ def overall_source_status(records: list[NormalizedUsageRecord]) -> SourceStatus:
 
 
 def collection_window(
-    agent: SupportedAgent, repository: LedgerRepository, *, now: datetime
+    agent: SupportedAgent,
+    repository: LedgerRepository,
+    *,
+    now: datetime,
+    configured_start: datetime = DEFAULT_INITIAL_START,
 ) -> TimeWindow | None:
-    """The window to collect for one agent.
+    """The forward window to collect for one agent.
 
-    Since the agent's last checkpoint, or exactly the requested initial
-    backfill if it has never been collected before — never extended past
-    the initial backfill's own end on a first run, per the "no
-    unrequested historic scan" requirement. Returns None if there is
-    nothing new to collect (the window would be empty).
+    Since the agent's last checkpoint, or from ``configured_start`` through
+    ``now`` on an agent's first-ever collection — no fixed cap, so a widened
+    ``configured_start`` always reaches all the way to ``now`` on a first
+    run. Returns None if there is nothing new to collect (the window would
+    be empty).
     """
     checkpoint = repository.get_checkpoint(agent)
-    if checkpoint is None:
-        start = INITIAL_COLLECTION_WINDOW.start_utc
-        end = min(INITIAL_COLLECTION_WINDOW.end_utc, now)
-    else:
-        start = checkpoint
-        end = now
+    start = checkpoint if checkpoint is not None else configured_start
+    end = now
 
     if start >= end:
         return None
     return TimeWindow(start=start, end=end)
+
+
+def backfill_window(
+    agent: SupportedAgent, repository: LedgerRepository, *, configured_start: datetime
+) -> TimeWindow | None:
+    """The gap window to backfill when ``configured_start`` predates existing records.
+
+    None if the agent has no records yet (nothing to backfill against — the
+    forward window from ``collection_window`` already covers a first run),
+    if ``configured_start`` is not earlier than the earliest existing record
+    (the gap is already closed), or if a prior run already fully scanned this
+    exact ``configured_start`` down to that point (recorded via
+    ``get_backfill_probed_start``) — a source's true earliest activity can sit
+    later than ``configured_start`` forever, so without this marker the same
+    empty window would be rescanned on every run.
+    """
+    earliest = repository.get_earliest_record_at(agent)
+    if earliest is None or configured_start >= earliest:
+        return None
+
+    probed_start = repository.get_backfill_probed_start(agent)
+    if probed_start is not None and configured_start >= probed_start:
+        return None
+
+    return TimeWindow(start=configured_start, end=earliest)
 
 
 def source_paths_by_agent(
@@ -109,21 +143,38 @@ def collect_agent(
     *,
     now: datetime,
     dry_run: bool,
+    configured_start: datetime = DEFAULT_INITIAL_START,
 ) -> AgentCollectionResult:
-    """Collect one agent's new usage records and, unless dry-run, persist them."""
-    window = collection_window(agent, repository, now=now)
-    if window is None:
+    """Collect one agent's new usage records — forward and any backfill gap — and persist them."""
+    is_first_ever_run = repository.get_checkpoint(agent) is None
+    forward = collection_window(agent, repository, now=now, configured_start=configured_start)
+    backfill = backfill_window(agent, repository, configured_start=configured_start)
+
+    if forward is None and backfill is None:
         return AgentCollectionResult(
             agent=agent, status=None, records_observed=0, records_inserted=0
         )
 
-    records = adapter_collect(source_path, window)
+    records: list[NormalizedUsageRecord] = []
+    if forward is not None:
+        records.extend(adapter_collect(source_path, forward))
+    if backfill is not None:
+        records.extend(adapter_collect(source_path, backfill))
+
     status = overall_source_status(records)
 
     inserted = 0
     if not dry_run:
         inserted = repository.insert_records(records)
-        repository.set_checkpoint(agent, window.end_utc)
+        if forward is not None:
+            repository.set_checkpoint(agent, forward.end_utc)
+            if is_first_ever_run:
+                # The forward window on a first-ever run already started at
+                # configured_start, so it fully covers the same span a
+                # backfill would otherwise rescan on every later run.
+                repository.set_backfill_probed_start(agent, configured_start)
+        if backfill is not None:
+            repository.set_backfill_probed_start(agent, backfill.start_utc)
 
     return AgentCollectionResult(
         agent=agent, status=status, records_observed=len(records), records_inserted=inserted
@@ -137,6 +188,7 @@ def collect_all(
     claude_projects_dir: Path,
     codex_sessions_dir: Path,
     now: datetime,
+    configured_start: datetime = DEFAULT_INITIAL_START,
     dry_run: bool = False,
 ) -> list[AgentCollectionResult]:
     """Collect every supported agent's new usage into the local ledger."""
@@ -149,7 +201,13 @@ def collect_all(
     try:
         return [
             collect_agent(
-                agent, adapter_collect, source_paths[agent], repository, now=now, dry_run=dry_run
+                agent,
+                adapter_collect,
+                source_paths[agent],
+                repository,
+                now=now,
+                dry_run=dry_run,
+                configured_start=configured_start,
             )
             for agent, adapter_collect in ADAPTER_COLLECTORS
         ]

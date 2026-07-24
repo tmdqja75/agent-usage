@@ -142,6 +142,26 @@ class LedgerRepository:
                 _UPSERT_CHECKPOINT_SQL, (agent.value, occurred_at_utc.isoformat())
             )
 
+    def get_backfill_probed_start(self, agent: SupportedAgent) -> datetime | None:
+        """Return the earliest start already fully backfill-probed for an agent, or None."""
+        row = self._connection.execute(
+            "SELECT probed_start FROM backfill_probes WHERE agent = ?",
+            (agent.value,),
+        ).fetchone()
+        if row is None:
+            return None
+        return normalize_utc(datetime.fromisoformat(row["probed_start"]))
+
+    def set_backfill_probed_start(self, agent: SupportedAgent, start: datetime) -> None:
+        """Record that the backfill window down to ``start`` has been fully scanned."""
+        start_utc = normalize_utc(start)
+        with self._connection:
+            self._connection.execute(
+                "INSERT INTO backfill_probes (agent, probed_start) VALUES (?, ?) "
+                "ON CONFLICT(agent) DO UPDATE SET probed_start = excluded.probed_start",
+                (agent.value, start_utc.isoformat()),
+            )
+
     def get_or_create_device_id(self) -> str:
         """Return this install's opaque device identifier, creating one if unset."""
         row = self._connection.execute(

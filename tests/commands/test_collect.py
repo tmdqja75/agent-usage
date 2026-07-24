@@ -8,6 +8,7 @@ from codex_sessions import token_count_event, write_rollout
 
 from agent_usage.commands.collect import (
     AgentCollectionResult,
+    backfill_window,
     collect_agent,
     collect_all,
     collection_window,
@@ -15,7 +16,7 @@ from agent_usage.commands.collect import (
 )
 from agent_usage.ledger.repository import LedgerRepository
 from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
-from agent_usage.time_window import INITIAL_COLLECTION_WINDOW
+from agent_usage.time_window import DEFAULT_INITIAL_START
 
 UTC = timezone.utc
 NOW = datetime(2026, 7, 10, 12, 0, tzinfo=UTC)
@@ -44,7 +45,7 @@ def _write_codex_activity(tmp_path, *, timestamp="2026-07-10T10:00:00+00:00"):
 # --- collection_window -------------------------------------------------
 
 
-def test_collection_window_uses_the_initial_backfill_when_no_checkpoint(tmp_path) -> None:
+def test_collection_window_uses_the_default_initial_start_when_no_checkpoint(tmp_path) -> None:
     repository = LedgerRepository.open(tmp_path / "ledger.sqlite3")
     try:
         window = collection_window(SupportedAgent.CLAUDE_CODE, repository, now=NOW)
@@ -52,11 +53,11 @@ def test_collection_window_uses_the_initial_backfill_when_no_checkpoint(tmp_path
         repository.close()
 
     assert window is not None
-    assert window.start_utc == INITIAL_COLLECTION_WINDOW.start_utc
+    assert window.start_utc == DEFAULT_INITIAL_START
     assert window.end_utc == NOW
 
 
-def test_collection_window_never_extends_the_initial_backfill_past_its_own_end(tmp_path) -> None:
+def test_collection_window_first_run_always_extends_to_now_with_no_fixed_cap(tmp_path) -> None:
     far_future = datetime(2027, 1, 1, tzinfo=UTC)
     repository = LedgerRepository.open(tmp_path / "ledger.sqlite3")
     try:
@@ -65,8 +66,23 @@ def test_collection_window_never_extends_the_initial_backfill_past_its_own_end(t
         repository.close()
 
     assert window is not None
-    assert window.start_utc == INITIAL_COLLECTION_WINDOW.start_utc
-    assert window.end_utc == INITIAL_COLLECTION_WINDOW.end_utc
+    assert window.start_utc == DEFAULT_INITIAL_START
+    assert window.end_utc == far_future
+
+
+def test_collection_window_honors_a_custom_configured_start(tmp_path) -> None:
+    custom_start = datetime(2026, 1, 1, tzinfo=UTC)
+    repository = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        window = collection_window(
+            SupportedAgent.CLAUDE_CODE, repository, now=NOW, configured_start=custom_start
+        )
+    finally:
+        repository.close()
+
+    assert window is not None
+    assert window.start_utc == custom_start
+    assert window.end_utc == NOW
 
 
 def test_collection_window_continues_from_the_checkpoint_after_the_first_run(tmp_path) -> None:
@@ -246,3 +262,134 @@ def test_collect_agent_reports_none_status_when_nothing_new(tmp_path) -> None:
     assert result == AgentCollectionResult(
         agent=SupportedAgent.CODEX, status=None, records_observed=0, records_inserted=0
     )
+
+
+# --- backfill_window ------------------------------------------------------
+
+
+def test_backfill_window_is_none_when_agent_has_no_existing_records(tmp_path) -> None:
+    repository = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        window = backfill_window(
+            SupportedAgent.CLAUDE_CODE, repository, configured_start=DEFAULT_INITIAL_START
+        )
+    finally:
+        repository.close()
+
+    assert window is None
+
+
+def test_backfill_window_is_none_when_configured_start_is_not_earlier_than_earliest_record(
+    tmp_path,
+) -> None:
+    repository = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        repository.insert_records(
+            [
+                NormalizedUsageRecord(
+                    agent=SupportedAgent.CLAUDE_CODE,
+                    occurred_at=datetime(2026, 7, 10, tzinfo=UTC),
+                    fingerprint="a",
+                    tokens=TokenUsage(input_tokens=1),
+                    source_status=SourceStatus.AVAILABLE_WITH_ACTIVITY,
+                )
+            ]
+        )
+        window = backfill_window(
+            SupportedAgent.CLAUDE_CODE,
+            repository,
+            configured_start=datetime(2026, 7, 10, tzinfo=UTC),
+        )
+    finally:
+        repository.close()
+
+    assert window is None
+
+
+def test_backfill_window_covers_the_gap_before_the_earliest_existing_record(tmp_path) -> None:
+    repository = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        repository.insert_records(
+            [
+                NormalizedUsageRecord(
+                    agent=SupportedAgent.CLAUDE_CODE,
+                    occurred_at=datetime(2026, 7, 10, tzinfo=UTC),
+                    fingerprint="a",
+                    tokens=TokenUsage(input_tokens=1),
+                    source_status=SourceStatus.AVAILABLE_WITH_ACTIVITY,
+                )
+            ]
+        )
+        window = backfill_window(
+            SupportedAgent.CLAUDE_CODE,
+            repository,
+            configured_start=datetime(2026, 1, 1, tzinfo=UTC),
+        )
+    finally:
+        repository.close()
+
+    assert window is not None
+    assert window.start_utc == datetime(2026, 1, 1, tzinfo=UTC)
+    assert window.end_utc == datetime(2026, 7, 10, tzinfo=UTC)
+
+
+# --- collect_agent: backfill gap-fill --------------------------------------
+
+
+def test_collect_agent_backfills_the_gap_without_disturbing_the_forward_checkpoint(
+    tmp_path,
+) -> None:
+    ledger_path = tmp_path / "ledger.sqlite3"
+    repository = LedgerRepository.open(ledger_path)
+    try:
+        checkpoint = datetime(2026, 7, 9, tzinfo=UTC)
+        repository.set_checkpoint(SupportedAgent.CLAUDE_CODE, checkpoint)
+        repository.insert_records(
+            [
+                NormalizedUsageRecord(
+                    agent=SupportedAgent.CLAUDE_CODE,
+                    occurred_at=datetime(2026, 7, 10, tzinfo=UTC),
+                    fingerprint="existing",
+                    tokens=TokenUsage(input_tokens=1),
+                    source_status=SourceStatus.AVAILABLE_WITH_ACTIVITY,
+                )
+            ]
+        )
+
+        seen_windows = []
+
+        def fake_adapter_collect(source_path, window):
+            seen_windows.append((window.start_utc, window.end_utc))
+            return [
+                NormalizedUsageRecord(
+                    agent=SupportedAgent.CLAUDE_CODE,
+                    occurred_at=window.start_utc,
+                    fingerprint=f"backfilled-{window.start_utc.isoformat()}",
+                    tokens=TokenUsage(input_tokens=1),
+                    source_status=SourceStatus.AVAILABLE_WITH_ACTIVITY,
+                )
+            ]
+
+        result = collect_agent(
+            SupportedAgent.CLAUDE_CODE,
+            fake_adapter_collect,
+            tmp_path / "unused-source",
+            repository,
+            now=NOW,
+            dry_run=False,
+            configured_start=datetime(2026, 1, 1, tzinfo=UTC),
+        )
+
+        final_checkpoint = repository.get_checkpoint(SupportedAgent.CLAUDE_CODE)
+        stored = repository.list_records(SupportedAgent.CLAUDE_CODE)
+    finally:
+        repository.close()
+
+    assert sorted(seen_windows) == [
+        (datetime(2026, 1, 1, tzinfo=UTC), datetime(2026, 7, 10, tzinfo=UTC)),
+        (checkpoint, NOW),
+    ]
+    assert final_checkpoint == NOW
+    assert result.records_observed == 2
+    assert result.records_inserted == 2
+    assert len(stored) == 3

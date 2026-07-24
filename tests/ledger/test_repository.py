@@ -230,3 +230,27 @@ def test_get_earliest_record_at_returns_the_minimum_occurred_at_for_that_agent(t
         repo.close()
 
     assert earliest == datetime(2026, 7, 5, tzinfo=UTC)
+
+
+def test_get_backfill_probed_start_returns_none_when_never_set(tmp_path) -> None:
+    repo = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        assert repo.get_backfill_probed_start(SupportedAgent.CLAUDE_CODE) is None
+    finally:
+        repo.close()
+
+
+def test_set_backfill_probed_start_persists_and_overwrites_per_agent(tmp_path) -> None:
+    repo = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        repo.set_backfill_probed_start(SupportedAgent.CLAUDE_CODE, datetime(2026, 7, 4, tzinfo=UTC))
+        repo.set_backfill_probed_start(SupportedAgent.CODEX, datetime(2026, 1, 1, tzinfo=UTC))
+        repo.set_backfill_probed_start(SupportedAgent.CLAUDE_CODE, datetime(2026, 1, 1, tzinfo=UTC))
+
+        claude_probe = repo.get_backfill_probed_start(SupportedAgent.CLAUDE_CODE)
+        codex_probe = repo.get_backfill_probed_start(SupportedAgent.CODEX)
+    finally:
+        repo.close()
+
+    assert claude_probe == datetime(2026, 1, 1, tzinfo=UTC)
+    assert codex_probe == datetime(2026, 1, 1, tzinfo=UTC)

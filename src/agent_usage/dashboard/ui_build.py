@@ -62,7 +62,7 @@ def ensure_build(ui_dir: Path, *, force: bool = False, run=subprocess.run) -> Pa
     package_manager = _package_manager()
     if not (ui_dir / "node_modules").is_dir():
         _run_step(run, [*package_manager, "install"], ui_dir)
-    _run_step(run, [*package_manager, "build"], ui_dir)
+    _run_step(run, [*package_manager, "run", "build"], ui_dir)
     if not (dist_dir / "index.html").is_file():
         raise UIBuildError("dashboard UI build did not produce dist/index.html")
     return dist_dir

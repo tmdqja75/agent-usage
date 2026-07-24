@@ -28,7 +28,7 @@ Use the same `OWNER/PROFILE-REPO` target on each device. Run collection before p
 
 ## Profile dashboard workflow
 
-The profile repository's GitHub Actions workflow validates the public device/day records, merges their aggregates, and refreshes the managed README plus static Plotly-generated PNG assets. The template lives in this collector repository at `templates/github-workflow.yml`; copy it into the profile repository only when profile initialization has been explicitly approved.
+The profile repository's GitHub Actions workflow validates the public device/day records, merges their aggregates, and refreshes the managed README plus a screenshot of the dashboard. The template lives in this collector repository at `templates/github-workflow.yml`; copy it into the profile repository only when profile initialization has been explicitly approved.
 
 The workflow is intentionally triggered only by direct default-branch changes under `data/v1/**`. It serializes dashboard runs and commits generated README/chart changes only when the rendered output differs. Its dashboard does not expose device IDs or raw source records.
 

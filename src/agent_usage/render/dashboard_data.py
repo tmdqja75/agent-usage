@@ -1,8 +1,8 @@
 """Build the chart-ready ``data.json`` payload consumed by the interactive dashboard UI.
 
-Pure and I/O-free: takes already-validated daily payloads (the same
-``validate_and_partition(...).valid_payloads`` the Plotly path uses) and
-reshapes them into the exact JSON contract the React charts expect.
+Pure and I/O-free: takes already-validated daily payloads from
+``validate_and_partition(...).valid_payloads`` and reshapes them into the exact
+JSON contract the React charts expect.
 """
 
 from __future__ import annotations

@@ -103,7 +103,10 @@ def render(
     pie_top_n: int = typer.Option(
         6,
         "--pie-top-n",
-        help="Max Skills/MCP pie slices to show before bucketing the rest into 'Other'.",
+        help="Max Skills/MCP slices to show before bucketing the rest into 'Other'.",
+    ),
+    rebuild: bool = typer.Option(
+        False, "--rebuild", help="Force a fresh UI build even if the cached build looks current."
     ),
 ) -> None:
     """Render a local preview of the dashboard from this device's own collected data."""
@@ -112,14 +115,18 @@ def render(
     now = datetime.now(timezone.utc)
     config = load_config(config_file_path())
     resolved_output_dir = output_dir or (ledger_file_path().parent / "preview")
-    result = render_command.render(
-        ledger_path=ledger_file_path(),
-        output_dir=resolved_output_dir,
-        privacy_policy=PrivacyPolicy.from_config(config),
-        today=now.date(),
-        generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
-        pie_top_n=pie_top_n,
-    )
+    with tempfile.TemporaryDirectory(prefix="agent-usage-render-") as tmp:
+        result = render_command.render(
+            ledger_path=ledger_file_path(),
+            output_dir=resolved_output_dir,
+            ui_dir=dashboard_command.UI_DIR,
+            tmp_stage_dir=Path(tmp),
+            privacy_policy=PrivacyPolicy.from_config(config),
+            today=now.date(),
+            generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
+            pie_top_n=pie_top_n,
+            force_build=rebuild,
+        )
     typer.echo(f"agent-usage: preview written to {result.readme_path}")
     typer.echo(
         "agent-usage: dashboard changed" if result.changed else "agent-usage: dashboard unchanged"

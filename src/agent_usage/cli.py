@@ -75,6 +75,7 @@ def doctor() -> None:
     typer.echo(f"device id: {report.device_id}")
     typer.echo(f"repo target: {report.repo_target or '(not set)'}")
     typer.echo(f"display timezone: {report.display_timezone}")
+    typer.echo(f"initial collection start: {report.initial_collection_start or 'default (2026-07-04)'}")
     for source in report.sources:
         status = source.status.value if source.status is not None else "up to date"
         typer.echo(f"  {source.agent.value}: {status}")

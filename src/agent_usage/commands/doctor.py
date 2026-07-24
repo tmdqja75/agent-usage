@@ -17,7 +17,7 @@ from agent_usage.commands.collect import (
     overall_source_status,
     source_paths_by_agent,
 )
-from agent_usage.config import load_config
+from agent_usage.config import load_config, resolve_initial_collection_start
 from agent_usage.ledger.repository import LedgerRepository
 from agent_usage.models import SourceStatus, SupportedAgent
 
@@ -35,6 +35,7 @@ class DoctorReport:
     device_id: str
     repo_target: str | None
     display_timezone: str
+    initial_collection_start: str | None
     sources: tuple[SourceDiagnostic, ...]
 
 
@@ -49,6 +50,7 @@ def run_doctor(
 ) -> DoctorReport:
     """Summarize local configuration and probe each agent source's current status."""
     config = load_config(config_path)
+    configured_start = resolve_initial_collection_start(config.initial_collection_start)
     source_paths = source_paths_by_agent(
         hermes_db=hermes_db,
         claude_projects_dir=claude_projects_dir,
@@ -60,7 +62,9 @@ def run_doctor(
         device_id = repository.get_or_create_device_id()
         sources = []
         for agent, adapter_collect in ADAPTER_COLLECTORS:
-            window = collection_window(agent, repository, now=now)
+            window = collection_window(
+                agent, repository, now=now, configured_start=configured_start
+            )
             if window is None:
                 sources.append(SourceDiagnostic(agent=agent, status=None))
                 continue
@@ -73,5 +77,6 @@ def run_doctor(
         device_id=device_id,
         repo_target=config.repo_target,
         display_timezone=config.display_timezone,
+        initial_collection_start=config.initial_collection_start,
         sources=tuple(sources),
     )

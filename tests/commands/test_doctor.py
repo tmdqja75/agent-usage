@@ -82,6 +82,21 @@ def test_doctor_never_writes_ledger_events_or_moves_checkpoints(tmp_path) -> Non
         repository.close()
 
 
+def test_doctor_report_surfaces_the_configured_initial_collection_start(tmp_path) -> None:
+    config_path = tmp_path / "config.json"
+    save_config(config_path, AppConfig(initial_collection_start="2026-01-01"))
+
+    report = _run(tmp_path, config_path=config_path)
+
+    assert report.initial_collection_start == "2026-01-01"
+
+
+def test_doctor_report_defaults_initial_collection_start_to_none(tmp_path) -> None:
+    report = _run(tmp_path)
+
+    assert report.initial_collection_start is None
+
+
 def test_doctor_device_id_is_stable_across_runs(tmp_path) -> None:
     config_path = tmp_path / "config.json"
     ledger_path = tmp_path / "ledger.sqlite3"

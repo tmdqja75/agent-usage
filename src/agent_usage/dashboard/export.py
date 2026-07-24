@@ -94,7 +94,7 @@ def screenshot_payload(
             page.evaluate("document.fonts.ready")
             page.wait_for_timeout(_SETTLE_MS)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            page.screenshot(path=str(output_path), full_page=True)
+            page.screenshot(path=str(output_path), full_page=True, type="png")
             context.close()
             browser.close()
     finally:

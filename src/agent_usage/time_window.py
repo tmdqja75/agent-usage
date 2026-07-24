@@ -62,7 +62,8 @@ class TimeWindow:
         return self.start <= instant_utc < self.end
 
 
-INITIAL_COLLECTION_WINDOW = TimeWindow(
-    start=datetime(2026, 7, 4, 0, 0, tzinfo=UTC),
-    end=datetime(2026, 7, 18, 0, 0, tzinfo=UTC),
-)
+DEFAULT_INITIAL_START = datetime(2026, 7, 4, 0, 0, tzinfo=UTC)
+"""Default first-run collection start when no config override is set."""
+
+EPOCH_START = datetime(1970, 1, 1, 0, 0, tzinfo=UTC)
+"""Sentinel start used to request unbounded ('ALL') history backfill."""

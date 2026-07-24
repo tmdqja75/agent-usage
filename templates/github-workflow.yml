@@ -1,4 +1,5 @@
 # Regenerates the managed Agent Usage dashboard section in README.md
+# (screenshotting the interactive dashboard to assets/agent-usage/dashboard.png)
 # whenever a device pushes new sanitized daily aggregates.
 #
 # Install this file as .github/workflows/agent-usage-dashboard.yml in your
@@ -54,24 +55,33 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Enable pnpm
+        run: corepack enable
+
       - name: Install agent-usage
         run: pip install ./.agent-usage-src
+
+      - name: Install Chromium for Playwright
+        run: python -m playwright install --with-deps chromium
 
       - name: Validate public records and render dashboard
         run: |
           python .agent-usage-src/scripts/build_profile_dashboard.py \
             --data-dir data/v1/devices \
             --readme README.md \
-            --rolling-chart assets/agent-usage/token-activity-14d.png \
-            --total-chart assets/agent-usage/token-activity-total.png \
-            --skills-chart assets/agent-usage/skills.png \
-            --mcp-chart assets/agent-usage/mcp.png
+            --dashboard-png assets/agent-usage/dashboard.png \
+            --ui-dir .agent-usage-src/dashboard-ui
 
       - name: Commit and push if the dashboard changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md assets/agent-usage
+          git add README.md assets/agent-usage/dashboard.png
           if git status --porcelain | grep -q .; then
             git commit -m "chore: update agent usage dashboard"
             git push origin HEAD:${{ github.ref_name }}

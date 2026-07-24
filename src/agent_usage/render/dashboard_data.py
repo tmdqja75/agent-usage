@@ -32,6 +32,7 @@ def build_dashboard_data(
     today: date,
     window_days: int = 14,
     pie_top_n: int = 6,
+    bar_chart_threshold_days: int = 15,
 ) -> dict:
     """Reshape validated daily payloads into the dashboard's data.json contract."""
     token_by_date = daily_token_totals(valid_payloads)
@@ -52,6 +53,9 @@ def build_dashboard_data(
     else:
         start = today - timedelta(days=window_days - 1)
         window = {"start": start.isoformat(), "end": today.isoformat()}
+
+    span_days = (date.fromisoformat(window["end"]) - date.fromisoformat(window["start"])).days + 1
+    tokens_chart_type = "bar" if span_days > bar_chart_threshold_days else "area"
 
     aggregated = aggregate_records(valid_payloads)
     agents = [
@@ -77,6 +81,7 @@ def build_dashboard_data(
     return {
         "window": window,
         "tokens": tokens,
+        "tokensChartType": tokens_chart_type,
         "agents": agents,
         "skills": _pie(aggregated["skills"], pie_top_n),
         "mcp": _pie(aggregated["mcp_servers"], pie_top_n),

@@ -76,6 +76,7 @@ def doctor() -> None:
     typer.echo(f"repo target: {report.repo_target or '(not set)'}")
     typer.echo(f"display timezone: {report.display_timezone}")
     typer.echo(f"initial collection start: {report.initial_collection_start or 'default (2026-07-04)'}")
+    typer.echo(f"bar chart threshold: {report.bar_chart_threshold_days} day(s)")
     for source in report.sources:
         status = source.status.value if source.status is not None else "up to date"
         typer.echo(f"  {source.agent.value}: {status}")
@@ -104,6 +105,25 @@ def config_start_date(
 
     save_config(config_file_path(), config)
     typer.echo(f"agent-usage: initial collection start set to {value}")
+
+
+@config_app.command("bar-chart-threshold")
+def config_bar_chart_threshold(
+    days: int = typer.Option(
+        ..., "--days", help="Day span above which the token usage chart renders as bars."
+    ),
+) -> None:
+    """Set the day-span threshold above which the token usage chart renders as bars."""
+    if days < 1:
+        raise typer.BadParameter("--days must be a positive integer")
+
+    try:
+        config = replace(load_config(config_file_path()), bar_chart_threshold_days=days)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+
+    save_config(config_file_path(), config)
+    typer.echo(f"agent-usage: bar chart threshold set to {days} day(s)")
 
 
 @app.command()
@@ -165,6 +185,7 @@ def render(
             today=now.date(),
             generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
             pie_top_n=pie_top_n,
+            bar_chart_threshold_days=config.bar_chart_threshold_days,
             force_build=rebuild,
         )
     typer.echo(f"agent-usage: preview written to {result.readme_path}")

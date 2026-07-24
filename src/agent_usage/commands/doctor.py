@@ -36,6 +36,7 @@ class DoctorReport:
     repo_target: str | None
     display_timezone: str
     initial_collection_start: str | None
+    bar_chart_threshold_days: int
     sources: tuple[SourceDiagnostic, ...]
 
 
@@ -78,5 +79,6 @@ def run_doctor(
         repo_target=config.repo_target,
         display_timezone=config.display_timezone,
         initial_collection_start=config.initial_collection_start,
+        bar_chart_threshold_days=config.bar_chart_threshold_days,
         sources=tuple(sources),
     )

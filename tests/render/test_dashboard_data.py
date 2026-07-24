@@ -96,3 +96,19 @@ def test_build_dashboard_data_empty_uses_window_fallback():
     assert data["mcp"] == []
     assert data["heatmap"] == []
     assert all(entry["tokens"] == 0 for entry in data["agents"])
+
+
+def test_tokens_chart_type_is_area_when_span_equals_the_threshold():
+    data = build_dashboard_data(
+        [], today=date(2026, 7, 15), window_days=5, bar_chart_threshold_days=5
+    )
+    assert data["window"] == {"start": "2026-07-11", "end": "2026-07-15"}
+    assert data["tokensChartType"] == "area"
+
+
+def test_tokens_chart_type_is_bar_when_span_exceeds_the_threshold():
+    data = build_dashboard_data(
+        [], today=date(2026, 7, 16), window_days=6, bar_chart_threshold_days=5
+    )
+    assert data["window"] == {"start": "2026-07-11", "end": "2026-07-16"}
+    assert data["tokensChartType"] == "bar"

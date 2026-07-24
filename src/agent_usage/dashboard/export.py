@@ -114,6 +114,7 @@ def export_dashboard_png(
     tmp_stage_dir: Path,
     lang: str = "en",
     pie_top_n: int = 6,
+    bar_chart_threshold_days: int = 15,
     width: int = 1100,
     scale: int = 2,
     force_build: bool = False,
@@ -126,6 +127,7 @@ def export_dashboard_png(
         privacy_policy=privacy_policy,
         today=today,
         pie_top_n=pie_top_n,
+        bar_chart_threshold_days=bar_chart_threshold_days,
         tmp_stage_dir=tmp_stage_dir,
     )
     dist_dir = ensure_build(ui_dir, force=force_build)

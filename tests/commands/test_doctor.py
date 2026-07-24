@@ -97,6 +97,21 @@ def test_doctor_report_defaults_initial_collection_start_to_none(tmp_path) -> No
     assert report.initial_collection_start is None
 
 
+def test_doctor_report_surfaces_the_configured_bar_chart_threshold_days(tmp_path) -> None:
+    config_path = tmp_path / "config.json"
+    save_config(config_path, AppConfig(bar_chart_threshold_days=5))
+
+    report = _run(tmp_path, config_path=config_path)
+
+    assert report.bar_chart_threshold_days == 5
+
+
+def test_doctor_report_defaults_bar_chart_threshold_days_to_15(tmp_path) -> None:
+    report = _run(tmp_path)
+
+    assert report.bar_chart_threshold_days == 15
+
+
 def test_doctor_device_id_is_stable_across_runs(tmp_path) -> None:
     config_path = tmp_path / "config.json"
     ledger_path = tmp_path / "ledger.sqlite3"

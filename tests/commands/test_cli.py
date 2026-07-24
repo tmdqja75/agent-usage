@@ -296,6 +296,27 @@ def test_config_start_date_rejects_a_malformed_date(tmp_path, monkeypatch) -> No
     assert not (tmp_path / "config.json").exists()
 
 
+def test_config_bar_chart_threshold_persists_a_custom_value(tmp_path, monkeypatch) -> None:
+    import json
+
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "bar-chart-threshold", "--days", "5"])
+
+    assert result.exit_code == 0
+    config_path = tmp_path / "config.json"
+    assert json.loads(config_path.read_text())["bar_chart_threshold_days"] == 5
+
+
+def test_config_bar_chart_threshold_rejects_a_non_positive_value(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "bar-chart-threshold", "--days", "0"])
+
+    assert result.exit_code != 0
+    assert not (tmp_path / "config.json").exists()
+
+
 def test_collect_uses_the_configured_start_date(tmp_path, monkeypatch) -> None:
     _patch_local_paths(monkeypatch, tmp_path)
     _patch_missing_sources(monkeypatch, tmp_path)

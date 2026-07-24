@@ -54,6 +54,7 @@ def render(
     today: date,
     generated_at: str,
     pie_top_n: int = 6,
+    bar_chart_threshold_days: int = 15,
     force_build: bool = False,
 ) -> RenderResult:
     """Regenerate this device's local dashboard preview. Returns whether anything changed."""
@@ -82,6 +83,7 @@ def render(
         ui_dir=ui_dir,
         tmp_stage_dir=tmp_stage_dir,
         pie_top_n=pie_top_n,
+        bar_chart_threshold_days=bar_chart_threshold_days,
         force_build=force_build,
     )
     png_bytes = tmp_png.read_bytes()

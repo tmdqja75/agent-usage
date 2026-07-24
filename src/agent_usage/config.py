@@ -36,6 +36,11 @@ def _validate_initial_collection_start(value: str | None) -> None:
         ) from error
 
 
+def _validate_bar_chart_threshold_days(value: int) -> None:
+    if value < 1:
+        raise ValueError("bar_chart_threshold_days must be a positive integer")
+
+
 def _app_dirs() -> PlatformDirs:
     return PlatformDirs(appname=APP_NAME)
 
@@ -69,6 +74,7 @@ class AppConfig:
     privacy_block: tuple[str, ...] = ()
     display_timezone: str = "UTC"
     initial_collection_start: str | None = None
+    bar_chart_threshold_days: int = 15
     schedule_enabled: bool = False
     schedule_time: str | None = None
 
@@ -86,6 +92,8 @@ class AppConfig:
             ) from error
 
         _validate_initial_collection_start(self.initial_collection_start)
+
+        _validate_bar_chart_threshold_days(self.bar_chart_threshold_days)
 
         if self.schedule_time is not None and not _SCHEDULE_TIME_PATTERN.match(
             self.schedule_time
@@ -110,6 +118,7 @@ class AppConfig:
             privacy_block=tuple(data.get("privacy_block", ())),
             display_timezone=data.get("display_timezone", "UTC"),
             initial_collection_start=data.get("initial_collection_start"),
+            bar_chart_threshold_days=data.get("bar_chart_threshold_days", 15),
             schedule_enabled=data.get("schedule_enabled", False),
             schedule_time=data.get("schedule_time"),
         )

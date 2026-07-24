@@ -191,3 +191,19 @@ def test_resolve_initial_collection_start_all_is_unbounded() -> None:
 
 def test_resolve_initial_collection_start_parses_a_custom_iso_date() -> None:
     assert resolve_initial_collection_start("2026-01-01") == datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def test_default_config_has_a_bar_chart_threshold_of_15_days() -> None:
+    config = AppConfig()
+
+    assert config.bar_chart_threshold_days == 15
+
+
+@pytest.mark.parametrize("bad_value", [0, -1, -15])
+def test_config_rejects_non_positive_bar_chart_threshold_days(bad_value: int) -> None:
+    with pytest.raises(ValueError, match="bar_chart_threshold_days"):
+        AppConfig(bar_chart_threshold_days=bad_value)
+
+
+def test_config_accepts_a_custom_bar_chart_threshold_days() -> None:
+    assert AppConfig(bar_chart_threshold_days=5).bar_chart_threshold_days == 5

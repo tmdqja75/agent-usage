@@ -26,15 +26,11 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from agent_usage.aggregate import validate_and_partition
-from agent_usage.render.markdown import render_dashboard, update_readme
+from agent_usage.render.markdown import DASHBOARD_IMAGE_PATH, render_dashboard_markdown, update_readme
 
 DEFAULT_DATA_DIR = Path("data/v1/devices")
 DEFAULT_README = Path("README.md")
-DEFAULT_ROLLING_CHART = Path("assets/agent-usage/token-activity-14d.png")
-DEFAULT_TOTAL_CHART = Path("assets/agent-usage/token-activity-total.png")
-DEFAULT_AGENT_SHARE_CHART = Path("assets/agent-usage/agent-share.png")
-DEFAULT_SKILLS_CHART = Path("assets/agent-usage/skills.png")
-DEFAULT_MCP_CHART = Path("assets/agent-usage/mcp.png")
+DEFAULT_DASHBOARD = Path(DASHBOARD_IMAGE_PATH)
 
 
 def _load_entries(data_dir: Path) -> list[tuple[str, object]]:
@@ -83,25 +79,17 @@ def build(
     *,
     data_dir: Path,
     readme_path: Path,
-    rolling_chart_path: Path,
-    total_chart_path: Path | None = None,
-    agent_share_chart_path: Path | None = None,
-    skills_chart_path: Path | None = None,
-    mcp_chart_path: Path | None = None,
-    lifetime_chart_path: Path | None = None,
+    dashboard_path: Path | None = None,
     pie_top_n: int = 6,
     today: date,
     generated_at: str,
 ) -> bool:
-    """Regenerate the README and chart assets. Returns True if anything changed."""
-    if total_chart_path is None:
-        if lifetime_chart_path is None:
-            raise ValueError("total_chart_path is required")
-        total_chart_path = lifetime_chart_path.with_suffix(".png")
-    chart_dir = total_chart_path.parent
-    agent_share_chart_path = agent_share_chart_path or chart_dir / DEFAULT_AGENT_SHARE_CHART.name
-    skills_chart_path = skills_chart_path or chart_dir / DEFAULT_SKILLS_CHART.name
-    mcp_chart_path = mcp_chart_path or chart_dir / DEFAULT_MCP_CHART.name
+    """Regenerate the README with the dashboard section. Returns True if anything changed.
+
+    Note: The dashboard screenshot must be generated separately (e.g., via render.py),
+    as this script only updates the README markdown section.
+    """
+    dashboard_path = dashboard_path or readme_path.parent / DEFAULT_DASHBOARD
 
     entries = _load_entries(data_dir)
     partition = validate_and_partition(entries, today=today)
@@ -112,34 +100,16 @@ def build(
             file=sys.stderr,
         )
 
-    dashboard = render_dashboard(
-        partition.valid_payloads,
-        today=today,
-        generated_at=generated_at,
-        rolling_chart_path=_readme_relative_path(rolling_chart_path, readme_path=readme_path),
-        total_chart_path=_readme_relative_path(total_chart_path, readme_path=readme_path),
-        agent_share_chart_path=_readme_relative_path(
-            agent_share_chart_path, readme_path=readme_path
-        ),
-        skills_chart_path=_readme_relative_path(skills_chart_path, readme_path=readme_path),
-        mcp_chart_path=_readme_relative_path(mcp_chart_path, readme_path=readme_path),
-        pie_top_n=pie_top_n,
+    dashboard_markdown = render_dashboard_markdown(
+        image_path=_readme_relative_path(dashboard_path, readme_path=readme_path)
     )
 
     existing_readme = (
         readme_path.read_text(encoding="utf-8") if readme_path.exists() else ""
     )
-    updated_readme = update_readme(existing_readme, dashboard["markdown"])
+    updated_readme = update_readme(existing_readme, dashboard_markdown)
 
     changed = _write_if_changed(readme_path, updated_readme)
-    for chart_path, chart in (
-        (rolling_chart_path, dashboard["charts"]["rolling"]),
-        (total_chart_path, dashboard["charts"]["total"]),
-        (agent_share_chart_path, dashboard["charts"]["agent_share"]),
-        (skills_chart_path, dashboard["charts"]["skills"]),
-        (mcp_chart_path, dashboard["charts"]["mcp"]),
-    ):
-        changed = _write_if_changed(chart_path, chart) or changed
     return changed
 
 
@@ -147,12 +117,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--readme", type=Path, default=DEFAULT_README)
-    parser.add_argument("--rolling-chart", type=Path, default=DEFAULT_ROLLING_CHART)
-    parser.add_argument("--total-chart", type=Path, default=DEFAULT_TOTAL_CHART)
-    parser.add_argument("--lifetime-chart", type=Path, dest="lifetime_chart", help=argparse.SUPPRESS)
-    parser.add_argument("--agent-share-chart", type=Path, default=DEFAULT_AGENT_SHARE_CHART)
-    parser.add_argument("--skills-chart", type=Path, default=DEFAULT_SKILLS_CHART)
-    parser.add_argument("--mcp-chart", type=Path, default=DEFAULT_MCP_CHART)
+    parser.add_argument(
+        "--dashboard",
+        type=Path,
+        default=None,
+        help="Path to the dashboard screenshot (defaults to assets/agent-usage/dashboard.png)",
+    )
     parser.add_argument("--pie-top-n", type=int, default=6)
     parser.add_argument(
         "--today",
@@ -174,42 +144,11 @@ def main(argv: list[str] | None = None) -> int:
     now = datetime.now(timezone.utc)
     today = args.today or now.date()
     generated_at = args.generated_at or now.strftime("%Y-%m-%d %H:%M UTC")
-    default_chart_dir = args.readme.parent / "assets" / "agent-usage"
-    rolling_chart_path = (
-        default_chart_dir / DEFAULT_ROLLING_CHART.name
-        if args.rolling_chart == DEFAULT_ROLLING_CHART
-        else args.rolling_chart
-    )
-    agent_share_chart_path = (
-        default_chart_dir / DEFAULT_AGENT_SHARE_CHART.name
-        if args.agent_share_chart == DEFAULT_AGENT_SHARE_CHART
-        else args.agent_share_chart
-    )
-    skills_chart_path = (
-        default_chart_dir / DEFAULT_SKILLS_CHART.name
-        if args.skills_chart == DEFAULT_SKILLS_CHART
-        else args.skills_chart
-    )
-    mcp_chart_path = (
-        default_chart_dir / DEFAULT_MCP_CHART.name
-        if args.mcp_chart == DEFAULT_MCP_CHART
-        else args.mcp_chart
-    )
-    total_chart_path = (
-        default_chart_dir / DEFAULT_TOTAL_CHART.name
-        if args.total_chart == DEFAULT_TOTAL_CHART
-        else args.total_chart
-    )
 
     changed = build(
         data_dir=args.data_dir,
         readme_path=args.readme,
-        rolling_chart_path=rolling_chart_path,
-        total_chart_path=total_chart_path if args.lifetime_chart is None else None,
-        agent_share_chart_path=agent_share_chart_path,
-        skills_chart_path=skills_chart_path,
-        mcp_chart_path=mcp_chart_path,
-        lifetime_chart_path=args.lifetime_chart,
+        dashboard_path=args.dashboard,
         pie_top_n=args.pie_top_n,
         today=today,
         generated_at=generated_at,

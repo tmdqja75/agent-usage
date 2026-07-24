@@ -43,7 +43,7 @@ uv run agent-usage collect
 
 Render a fully local dashboard preview after collecting. This command does not
 use Git or the network; it writes a preview README, sanitized daily records,
-and Plotly-generated PNG charts to the chosen directory.
+and a screenshot of the dashboard to the chosen directory.
 
 ```sh
 uv run agent-usage render --output-dir ./agent-usage-preview

@@ -26,7 +26,7 @@ See [README.md](README.md) for the user-facing guide.
 | --- | --- |
 | `doctor` | Read-only diagnostics; no ledger writes, no checkpoint advance. |
 | `collect` | Read sources and persist normalized records (`--dry-run` to preview). |
-| `render` | Write a fully local Plotly PNG dashboard preview (no network). |
+| `render` | Write a fully local dashboard preview screenshot (no network). |
 | `dashboard` | Serve an interactive localhost chart dashboard (see below); supports `--lang en\|ko`. |
 | `publish` | Stage and push this device's sanitized aggregates (opt-in, `gh` auth). |
 | `init` | Local-only: record `OWNER/REPO` target, ensure device ID. |
@@ -36,8 +36,9 @@ See [README.md](README.md) for the user-facing guide.
 
 - `src/agent_usage/` — package source.
   - `aggregate.py` — validation, rolling windows, daily/token totals, record aggregation.
-  - `render/` — chart backends. `plotly.py` (PNG), `dashboard_data.py` (interactive
-    `data.json` builder), `_counters.py` (shared rank/bucket helpers, backend-neutral).
+  - `render/` — dashboard backends. `export.py` (screenshot via Playwright/Chromium),
+    `dashboard_data.py` (interactive `data.json` builder), `_counters.py` (shared rank/bucket helpers, backend-neutral).
+    `markdown.py` (assemble README with embedded screenshot).
   - `dashboard/` — interactive dashboard: `payload.py` (assemble data.json from local
     or multi-device), `remote.py` (shallow-clone multi-device fetch), `server.py`
     (stdlib loopback HTTP server; injects `window.__LANG__` into served

@@ -200,3 +200,57 @@ def test_checkpoint_is_independent_per_agent(repository) -> None:
     )
 
     assert repository.get_checkpoint(SupportedAgent.HERMES_AGENT) is None
+
+
+def test_get_earliest_record_at_returns_none_when_agent_has_no_records(tmp_path) -> None:
+    repo = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        assert repo.get_earliest_record_at(SupportedAgent.CLAUDE_CODE) is None
+    finally:
+        repo.close()
+
+
+def test_get_earliest_record_at_returns_the_minimum_occurred_at_for_that_agent(tmp_path) -> None:
+    repo = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        repo.insert_records(
+            [
+                _record("a", occurred_at=datetime(2026, 7, 10, tzinfo=UTC)),
+                _record("b", occurred_at=datetime(2026, 7, 5, tzinfo=UTC)),
+                _record("c", occurred_at=datetime(2026, 7, 20, tzinfo=UTC)),
+                _record(
+                    "d",
+                    agent=SupportedAgent.CODEX,
+                    occurred_at=datetime(2026, 7, 1, tzinfo=UTC),
+                ),
+            ]
+        )
+        earliest = repo.get_earliest_record_at(SupportedAgent.CLAUDE_CODE)
+    finally:
+        repo.close()
+
+    assert earliest == datetime(2026, 7, 5, tzinfo=UTC)
+
+
+def test_get_backfill_probed_start_returns_none_when_never_set(tmp_path) -> None:
+    repo = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        assert repo.get_backfill_probed_start(SupportedAgent.CLAUDE_CODE) is None
+    finally:
+        repo.close()
+
+
+def test_set_backfill_probed_start_persists_and_overwrites_per_agent(tmp_path) -> None:
+    repo = LedgerRepository.open(tmp_path / "ledger.sqlite3")
+    try:
+        repo.set_backfill_probed_start(SupportedAgent.CLAUDE_CODE, datetime(2026, 7, 4, tzinfo=UTC))
+        repo.set_backfill_probed_start(SupportedAgent.CODEX, datetime(2026, 1, 1, tzinfo=UTC))
+        repo.set_backfill_probed_start(SupportedAgent.CLAUDE_CODE, datetime(2026, 1, 1, tzinfo=UTC))
+
+        claude_probe = repo.get_backfill_probed_start(SupportedAgent.CLAUDE_CODE)
+        codex_probe = repo.get_backfill_probed_start(SupportedAgent.CODEX)
+    finally:
+        repo.close()
+
+    assert claude_probe == datetime(2026, 1, 1, tzinfo=UTC)
+    assert codex_probe == datetime(2026, 1, 1, tzinfo=UTC)

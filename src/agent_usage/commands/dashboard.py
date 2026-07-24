@@ -45,6 +45,7 @@ def run(
             privacy_policy=PrivacyPolicy.from_config(config),
             today=today,
             pie_top_n=pie_top_n,
+            bar_chart_threshold_days=config.bar_chart_threshold_days,
             tmp_stage_dir=tmp_stage_dir,
         )
     except NoRepoTargetError as error:

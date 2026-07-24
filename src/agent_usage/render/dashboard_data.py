@@ -14,7 +14,6 @@ from agent_usage.aggregate import (
     daily_agent_totals,
     daily_token_totals,
     daily_totals,
-    rolling_window,
 )
 from agent_usage.models import SupportedAgent
 from agent_usage.render._counters import bucket_top_n, rank_usage
@@ -33,10 +32,10 @@ def build_dashboard_data(
     today: date,
     window_days: int = 14,
     pie_top_n: int = 6,
+    bar_chart_threshold_days: int = 15,
 ) -> dict:
     """Reshape validated daily payloads into the dashboard's data.json contract."""
-    windowed = rolling_window(valid_payloads, end=today, days=window_days)
-    token_by_date = daily_token_totals(windowed)
+    token_by_date = daily_token_totals(valid_payloads)
 
     tokens = [
         {
@@ -54,6 +53,9 @@ def build_dashboard_data(
     else:
         start = today - timedelta(days=window_days - 1)
         window = {"start": start.isoformat(), "end": today.isoformat()}
+
+    span_days = (date.fromisoformat(window["end"]) - date.fromisoformat(window["start"])).days + 1
+    tokens_chart_type = "bar" if span_days > bar_chart_threshold_days else "area"
 
     aggregated = aggregate_records(valid_payloads)
     agents = [
@@ -79,6 +81,7 @@ def build_dashboard_data(
     return {
         "window": window,
         "tokens": tokens,
+        "tokensChartType": tokens_chart_type,
         "agents": agents,
         "skills": _pie(aggregated["skills"], pie_top_n),
         "mcp": _pie(aggregated["mcp_servers"], pie_top_n),

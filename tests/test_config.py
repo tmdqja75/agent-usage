@@ -6,6 +6,8 @@ import json
 
 import pytest
 
+from datetime import datetime, timezone
+
 from agent_usage.config import (
     AppConfig,
     config_dir,
@@ -14,8 +16,12 @@ from agent_usage.config import (
     get_or_create_device_id,
     ledger_file_path,
     load_config,
+    resolve_initial_collection_start,
     save_config,
 )
+from agent_usage.time_window import DEFAULT_INITIAL_START, EPOCH_START
+
+UTC = timezone.utc
 
 
 def test_config_dir_and_data_dir_are_scoped_to_this_app() -> None:
@@ -153,3 +159,51 @@ def test_get_or_create_device_id_works_on_a_fresh_install_with_no_app_dir_yet(
 
     assert fresh_install_path.exists()
     assert len(device_id) == 36
+
+
+def test_default_config_has_no_initial_collection_start_override() -> None:
+    config = AppConfig()
+
+    assert config.initial_collection_start is None
+
+
+@pytest.mark.parametrize("bad_value", ["", "not-a-date", "2026/07/04", "2026-13-40"])
+def test_config_rejects_malformed_initial_collection_start(bad_value: str) -> None:
+    with pytest.raises(ValueError, match="initial_collection_start"):
+        AppConfig(initial_collection_start=bad_value)
+
+
+def test_config_accepts_all_and_a_well_formed_iso_date_for_initial_collection_start() -> None:
+    assert AppConfig(initial_collection_start="ALL").initial_collection_start == "ALL"
+    assert (
+        AppConfig(initial_collection_start="2026-01-01").initial_collection_start
+        == "2026-01-01"
+    )
+
+
+def test_resolve_initial_collection_start_none_uses_the_default() -> None:
+    assert resolve_initial_collection_start(None) == DEFAULT_INITIAL_START
+
+
+def test_resolve_initial_collection_start_all_is_unbounded() -> None:
+    assert resolve_initial_collection_start("ALL") == EPOCH_START
+
+
+def test_resolve_initial_collection_start_parses_a_custom_iso_date() -> None:
+    assert resolve_initial_collection_start("2026-01-01") == datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def test_default_config_has_a_bar_chart_threshold_of_15_days() -> None:
+    config = AppConfig()
+
+    assert config.bar_chart_threshold_days == 15
+
+
+@pytest.mark.parametrize("bad_value", [0, -1, -15])
+def test_config_rejects_non_positive_bar_chart_threshold_days(bad_value: int) -> None:
+    with pytest.raises(ValueError, match="bar_chart_threshold_days"):
+        AppConfig(bar_chart_threshold_days=bad_value)
+
+
+def test_config_accepts_a_custom_bar_chart_threshold_days() -> None:
+    assert AppConfig(bar_chart_threshold_days=5).bar_chart_threshold_days == 5

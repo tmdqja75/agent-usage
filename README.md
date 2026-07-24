@@ -73,7 +73,9 @@ The charts are [bklit](https://ui.bklit.com) components (built on visx +
 `motion` + `@number-flow/react`) and are interactive:
 
 - **Total token usage** — hover shows an animated date ticker plus a tooltip
-  with Input / Output / Reasoning counts.
+  with Input / Output / Reasoning counts. Renders as an area chart by default;
+  switches to stacked bars once the collected span exceeds
+  `bar_chart_threshold_days` (default 15) so long ranges stay readable.
 - **Usage by agent** — a ring chart with a side legend; hovering either the ring
   or a legend row syncs the two and shows that agent's value in the ring center
   (large totals are compacted, e.g. `20.9M`).

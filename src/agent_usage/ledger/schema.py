@@ -42,6 +42,13 @@ CREATE TABLE IF NOT EXISTS daily_aggregates (
 )
 """
 
+_CREATE_BACKFILL_PROBES = """
+CREATE TABLE IF NOT EXISTS backfill_probes (
+    agent TEXT PRIMARY KEY,
+    probed_start TEXT NOT NULL
+)
+"""
+
 _CREATE_DEVICE_IDENTITY = """
 CREATE TABLE IF NOT EXISTS device_identity (
     id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -62,6 +69,7 @@ def apply_schema(connection: sqlite3.Connection) -> None:
         connection.execute(_CREATE_EVENTS)
         connection.execute(_CREATE_CHECKPOINTS)
         connection.execute(_CREATE_DAILY_AGGREGATES)
+        connection.execute(_CREATE_BACKFILL_PROBES)
         connection.execute(_CREATE_DEVICE_IDENTITY)
         connection.execute(_CREATE_SCHEMA_MIGRATIONS)
         connection.execute(

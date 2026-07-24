@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AgentRing } from "./charts/AgentRing";
 import { CalendarHeatmap } from "./charts/CalendarHeatmap";
-import { TokenArea } from "./charts/TokenArea";
+import { TokenChart } from "./charts/TokenChart";
 import { UsageDonut } from "./charts/UsageDonut";
 import { parseISODate, windowDateFmt } from "@/components/charts/chart-formatters";
 import { t } from "./i18n";
@@ -9,6 +9,7 @@ import { t } from "./i18n";
 type Data = {
   window: { start: string; end: string };
   tokens: { date: string; input: number; output: number; reasoning: number }[];
+  tokensChartType: "bar" | "area";
   agents: { agent: string; tokens: number }[];
   skills: { name: string; count: number }[];
   mcp: { name: string; count: number }[];
@@ -39,7 +40,7 @@ export default function App() {
             {windowDateFmt.format(parseISODate(data.window.end))}
           </span>
         </h2>
-        <TokenArea data={data.tokens} />
+        <TokenChart data={data.tokens} useBarChart={data.tokensChartType === "bar"} />
       </section>
       <section className="block">
         <h2>{t("title.usageByAgent")}</h2>

@@ -29,6 +29,9 @@ importers:
       '@visx/group':
         specifier: 4.0.1-alpha.0
         version: 4.0.1-alpha.0(react@18.3.1)
+      '@visx/pattern':
+        specifier: 4.0.1-alpha.0
+        version: 4.0.1-alpha.0(react@18.3.1)
       '@visx/responsive':
         specifier: 4.0.1-alpha.0
         version: 4.0.1-alpha.0(react@18.3.1)
@@ -703,6 +706,11 @@ packages:
 
   '@visx/group@4.0.1-alpha.0':
     resolution: {integrity: sha512-V19l7iQ7jccBv8kao/EByuI6o4xtxzzLV9nqVI1hRvmdzTVsuLpqlwzYCZUXJaTVvUWf8s4D2SQFjGkj/Nw+0w==}
+    peerDependencies:
+      react: ^16.14.0 || ^17.0.0-0 || ^18.0.0-0 || ^19.0.0-0
+
+  '@visx/pattern@4.0.1-alpha.0':
+    resolution: {integrity: sha512-KCqHpjtHdu95uqamc5PIYG55Xp0w+7/Zz63k4eeZErwK1o0PN2rZiBiuodNtENL8NqIU2b5AP+XI/xXaUH0M4Q==}
     peerDependencies:
       react: ^16.14.0 || ^17.0.0-0 || ^18.0.0-0 || ^19.0.0-0
 
@@ -1610,6 +1618,12 @@ snapshots:
       react: 18.3.1
 
   '@visx/group@4.0.1-alpha.0(react@18.3.1)':
+    dependencies:
+      '@types/react': 18.3.31
+      classnames: 2.5.1
+      react: 18.3.1
+
+  '@visx/pattern@4.0.1-alpha.0(react@18.3.1)':
     dependencies:
       '@types/react': 18.3.31
       classnames: 2.5.1

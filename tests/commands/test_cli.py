@@ -247,6 +247,98 @@ def test_publish_command_reports_a_clear_error_when_git_operations_fail(
     assert not isinstance(result.exception, GitCommandError)
 
 
+def test_config_start_date_requires_exactly_one_of_date_or_all(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "start-date"])
+
+    assert result.exit_code != 0
+
+
+def test_config_start_date_rejects_both_date_and_all(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "start-date", "--date", "2026-01-01", "--all"])
+
+    assert result.exit_code != 0
+
+
+def test_config_start_date_persists_a_custom_date(tmp_path, monkeypatch) -> None:
+    import json
+
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "start-date", "--date", "2026-01-01"])
+
+    assert result.exit_code == 0
+    config_path = tmp_path / "config.json"
+    assert json.loads(config_path.read_text())["initial_collection_start"] == "2026-01-01"
+
+
+def test_config_start_date_persists_all(tmp_path, monkeypatch) -> None:
+    import json
+
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "start-date", "--all"])
+
+    assert result.exit_code == 0
+    config_path = tmp_path / "config.json"
+    assert json.loads(config_path.read_text())["initial_collection_start"] == "ALL"
+
+
+def test_config_start_date_rejects_a_malformed_date(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "start-date", "--date", "not-a-date"])
+
+    assert result.exit_code != 0
+    assert not (tmp_path / "config.json").exists()
+
+
+def test_config_bar_chart_threshold_persists_a_custom_value(tmp_path, monkeypatch) -> None:
+    import json
+
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "bar-chart-threshold", "--days", "5"])
+
+    assert result.exit_code == 0
+    config_path = tmp_path / "config.json"
+    assert json.loads(config_path.read_text())["bar_chart_threshold_days"] == 5
+
+
+def test_config_bar_chart_threshold_rejects_a_non_positive_value(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+
+    result = runner.invoke(app, ["config", "bar-chart-threshold", "--days", "0"])
+
+    assert result.exit_code != 0
+    assert not (tmp_path / "config.json").exists()
+
+
+def test_collect_uses_the_configured_start_date(tmp_path, monkeypatch) -> None:
+    _patch_local_paths(monkeypatch, tmp_path)
+    _patch_missing_sources(monkeypatch, tmp_path)
+
+    runner.invoke(app, ["config", "start-date", "--all"])
+    captured = {}
+    original_collect_all = cli_module.collect_command.collect_all
+
+    def _capturing_collect_all(**kwargs):
+        captured.update(kwargs)
+        return original_collect_all(**kwargs)
+
+    monkeypatch.setattr(cli_module.collect_command, "collect_all", _capturing_collect_all)
+
+    result = runner.invoke(app, ["collect", "--dry-run"])
+
+    assert result.exit_code == 0
+    from agent_usage.time_window import EPOCH_START
+
+    assert captured["configured_start"] == EPOCH_START
+
+
 def test_publish_command_resolves_repo_url_from_config_and_reports_the_result(
     tmp_path, monkeypatch
 ) -> None:

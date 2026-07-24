@@ -37,6 +37,7 @@ def build_payload(
     privacy_policy: PrivacyPolicy,
     today: date,
     pie_top_n: int,
+    bar_chart_threshold_days: int = 15,
     tmp_stage_dir: Path,
 ) -> dict:
     """Produce the dashboard data.json dict from the chosen data source."""
@@ -49,4 +50,9 @@ def build_payload(
             tmp_stage_dir=tmp_stage_dir,
         )
     valid_payloads = validate_and_partition(entries, today=today).valid_payloads
-    return build_dashboard_data(valid_payloads, today=today, pie_top_n=pie_top_n)
+    return build_dashboard_data(
+        valid_payloads,
+        today=today,
+        pie_top_n=pie_top_n,
+        bar_chart_threshold_days=bar_chart_threshold_days,
+    )

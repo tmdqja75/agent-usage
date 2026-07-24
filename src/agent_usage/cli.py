@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,7 +23,14 @@ from agent_usage.commands.collect import (
     DEFAULT_HERMES_STATE_DB,
 )
 from agent_usage.commands.publish import GhAuthError
-from agent_usage.config import config_file_path, data_dir, ledger_file_path, load_config
+from agent_usage.config import (
+    config_file_path,
+    data_dir,
+    ledger_file_path,
+    load_config,
+    resolve_initial_collection_start,
+    save_config,
+)
 from agent_usage.privacy import PrivacyPolicy
 from agent_usage.publish.git import GitCommandError
 from agent_usage.schedule.launchd import LaunchctlError
@@ -33,6 +41,9 @@ app = typer.Typer(
 )
 schedule_app = typer.Typer(help="Manage the opt-in local macOS daily scheduler.", no_args_is_help=True)
 app.add_typer(schedule_app, name="schedule")
+
+config_app = typer.Typer(help="Manage local agent-usage configuration.", no_args_is_help=True)
+app.add_typer(config_app, name="config")
 
 
 @app.callback()
@@ -64,9 +75,55 @@ def doctor() -> None:
     typer.echo(f"device id: {report.device_id}")
     typer.echo(f"repo target: {report.repo_target or '(not set)'}")
     typer.echo(f"display timezone: {report.display_timezone}")
+    typer.echo(f"initial collection start: {report.initial_collection_start or 'default (2026-07-04)'}")
+    typer.echo(f"bar chart threshold: {report.bar_chart_threshold_days} day(s)")
     for source in report.sources:
         status = source.status.value if source.status is not None else "up to date"
         typer.echo(f"  {source.agent.value}: {status}")
+
+
+@config_app.command("start-date")
+def config_start_date(
+    date: str | None = typer.Option(
+        None, "--date", help="Custom initial collection start date, in YYYY-MM-DD form."
+    ),
+    all_history: bool = typer.Option(
+        False, "--all", help="Collect all available local history (unbounded start)."
+    ),
+) -> None:
+    """Set how far back the first-ever collection for each agent should reach."""
+    if date is not None and all_history:
+        raise typer.BadParameter("pass either --date or --all, not both")
+    if date is None and not all_history:
+        raise typer.BadParameter("pass either --date or --all")
+
+    value = "ALL" if all_history else date
+    try:
+        config = replace(load_config(config_file_path()), initial_collection_start=value)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+
+    save_config(config_file_path(), config)
+    typer.echo(f"agent-usage: initial collection start set to {value}")
+
+
+@config_app.command("bar-chart-threshold")
+def config_bar_chart_threshold(
+    days: int = typer.Option(
+        ..., "--days", help="Day span above which the token usage chart renders as bars."
+    ),
+) -> None:
+    """Set the day-span threshold above which the token usage chart renders as bars."""
+    if days < 1:
+        raise typer.BadParameter("--days must be a positive integer")
+
+    try:
+        config = replace(load_config(config_file_path()), bar_chart_threshold_days=days)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+
+    save_config(config_file_path(), config)
+    typer.echo(f"agent-usage: bar chart threshold set to {days} day(s)")
 
 
 @app.command()
@@ -77,12 +134,15 @@ def collect(
 ) -> None:
     """Pull new local agent usage into the private ledger."""
     now = datetime.now(timezone.utc)
+    config = load_config(config_file_path())
+    configured_start = resolve_initial_collection_start(config.initial_collection_start)
     results = collect_command.collect_all(
         ledger_path=ledger_file_path(),
         hermes_db=DEFAULT_HERMES_STATE_DB,
         claude_projects_dir=DEFAULT_CLAUDE_CODE_PROJECTS_DIR,
         codex_sessions_dir=DEFAULT_CODEX_SESSIONS_DIR,
         now=now,
+        configured_start=configured_start,
         dry_run=dry_run,
     )
     for result in results:
@@ -125,6 +185,7 @@ def render(
             today=now.date(),
             generated_at=now.strftime("%Y-%m-%d %H:%M UTC"),
             pie_top_n=pie_top_n,
+            bar_chart_threshold_days=config.bar_chart_threshold_days,
             force_build=rebuild,
         )
     typer.echo(f"agent-usage: preview written to {result.readme_path}")

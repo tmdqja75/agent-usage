@@ -76,6 +76,18 @@ def test_build_dashboard_data_shapes_every_section():
     ]
 
 
+def test_build_dashboard_data_tokens_are_not_truncated_past_window_days():
+    payloads = [
+        _payload("2026-06-01", claude=_agent(input_=1, output=1, reasoning=0, headline=2)),
+        _payload("2026-07-11", claude=_agent(input_=2, output=2, reasoning=0, headline=4)),
+    ]
+
+    data = build_dashboard_data(payloads, today=date(2026, 7, 11), window_days=14)
+
+    assert data["window"] == {"start": "2026-06-01", "end": "2026-07-11"}
+    assert [entry["date"] for entry in data["tokens"]] == ["2026-06-01", "2026-07-11"]
+
+
 def test_build_dashboard_data_empty_uses_window_fallback():
     data = build_dashboard_data([], today=date(2026, 7, 18), window_days=14)
     assert data["window"] == {"start": "2026-07-05", "end": "2026-07-18"}
@@ -84,3 +96,19 @@ def test_build_dashboard_data_empty_uses_window_fallback():
     assert data["mcp"] == []
     assert data["heatmap"] == []
     assert all(entry["tokens"] == 0 for entry in data["agents"])
+
+
+def test_tokens_chart_type_is_area_when_span_equals_the_threshold():
+    data = build_dashboard_data(
+        [], today=date(2026, 7, 15), window_days=5, bar_chart_threshold_days=5
+    )
+    assert data["window"] == {"start": "2026-07-11", "end": "2026-07-15"}
+    assert data["tokensChartType"] == "area"
+
+
+def test_tokens_chart_type_is_bar_when_span_exceeds_the_threshold():
+    data = build_dashboard_data(
+        [], today=date(2026, 7, 16), window_days=6, bar_chart_threshold_days=5
+    )
+    assert data["window"] == {"start": "2026-07-11", "end": "2026-07-16"}
+    assert data["tokensChartType"] == "bar"

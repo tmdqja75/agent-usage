@@ -10,17 +10,35 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from platformdirs import PlatformDirs
 
 from agent_usage.ledger.repository import LedgerRepository
+from agent_usage.time_window import DEFAULT_INITIAL_START, EPOCH_START, UTC
 
 APP_NAME = "agent-usage"
 
 _REPO_TARGET_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 _SCHEDULE_TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def _validate_initial_collection_start(value: str | None) -> None:
+    if value is None or value == "ALL":
+        return
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+    except ValueError as error:
+        raise ValueError(
+            "initial_collection_start must be None, 'ALL', or an ISO date (YYYY-MM-DD)"
+        ) from error
+
+
+def _validate_bar_chart_threshold_days(value: int) -> None:
+    if value < 1:
+        raise ValueError("bar_chart_threshold_days must be a positive integer")
 
 
 def _app_dirs() -> PlatformDirs:
@@ -55,6 +73,8 @@ class AppConfig:
     privacy_allow: tuple[str, ...] = ()
     privacy_block: tuple[str, ...] = ()
     display_timezone: str = "UTC"
+    initial_collection_start: str | None = None
+    bar_chart_threshold_days: int = 15
     schedule_enabled: bool = False
     schedule_time: str | None = None
 
@@ -70,6 +90,10 @@ class AppConfig:
             raise ValueError(
                 "display_timezone must be a valid IANA timezone name"
             ) from error
+
+        _validate_initial_collection_start(self.initial_collection_start)
+
+        _validate_bar_chart_threshold_days(self.bar_chart_threshold_days)
 
         if self.schedule_time is not None and not _SCHEDULE_TIME_PATTERN.match(
             self.schedule_time
@@ -93,6 +117,8 @@ class AppConfig:
             privacy_allow=tuple(data.get("privacy_allow", ())),
             privacy_block=tuple(data.get("privacy_block", ())),
             display_timezone=data.get("display_timezone", "UTC"),
+            initial_collection_start=data.get("initial_collection_start"),
+            bar_chart_threshold_days=data.get("bar_chart_threshold_days", 15),
             schedule_enabled=data.get("schedule_enabled", False),
             schedule_time=data.get("schedule_time"),
         )
@@ -109,6 +135,15 @@ def save_config(path: Path, config: AppConfig) -> None:
     """Persist configuration to disk as JSON."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config.to_dict(), indent=2, sort_keys=True) + "\n")
+
+
+def resolve_initial_collection_start(value: str | None) -> datetime:
+    """Resolve a config's ``initial_collection_start`` to a concrete UTC datetime."""
+    if value is None:
+        return DEFAULT_INITIAL_START
+    if value == "ALL":
+        return EPOCH_START
+    return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC)
 
 
 def get_or_create_device_id(ledger_path: Path) -> str:

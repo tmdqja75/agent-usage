@@ -53,7 +53,8 @@ See [README.md](README.md) for the user-facing guide.
     Generated; treat as third-party. Chart colors read `--chart-*` tokens from
     `src/index.css`.
   - `src/charts/` — thin leaf wrappers that feed `data.json` into bklit:
-    `TokenArea` (AreaChart + tooltip), `AgentRing` (RingChart + Legend),
+    `TokenArea`/`TokenBar` (Area/stacked-Bar chart + tooltip, switched by
+    `TokenChart` on `data.tokensChartType`), `AgentRing` (RingChart + Legend),
     `UsageDonut` (PieChart, Skills + MCP), plus the custom `CalendarHeatmap` and
     the `names.ts` label/palette map.
   - `src/i18n.ts` — translation lookup and locale-aware number/date formatting,
@@ -65,6 +66,8 @@ See [README.md](README.md) for the user-facing guide.
 
 ## Conventions
 
+- Whenever a new function/feature is added or a bug is fixed, update
+  README.md and AGENTS.md to reflect it in the same change.
 - Every new Python module starts with `from __future__ import annotations`.
 - Match the surrounding code's style, naming, and comment density.
 - TDD: write a failing test first, then implement. Commit per logical unit.
@@ -81,9 +84,14 @@ See [README.md](README.md) for the user-facing guide.
   permitted gradients are those internal to a chart component's own default
   rendering — keep those intact.
 - `data.json` contract keys: `window {start,end}`, `tokens [{date,input,output,
-  reasoning}]`, `agents [{agent,tokens}]`, `skills [{name,count}]`,
-  `mcp [{name,count}]`, `heatmap [{date,tokens,byAgent [{agent,tokens}]}]`.
+  reasoning}]`, `tokensChartType ("bar"|"area")`, `agents [{agent,tokens}]`,
+  `skills [{name,count}]`, `mcp [{name,count}]`,
+  `heatmap [{date,tokens,byAgent [{agent,tokens}]}]`.
 - Skills/MCP pies bucket beyond `--pie-top-n` (default 6) into one `Other` entry.
+- `tokensChartType` is computed server-side in `render/dashboard_data.py` from
+  the window span vs. `AppConfig.bar_chart_threshold_days` (default 15, set via
+  `agent-usage config bar-chart-threshold --days N`) — `"bar"` above the
+  threshold, `"area"` at or below it.
 - bklit gradients (Area fill, ring/pie glows) are the permitted chart-internal
   exception — do not add page/block CSS gradients.
 

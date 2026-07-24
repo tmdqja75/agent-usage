@@ -124,6 +124,16 @@ class LedgerRepository:
             return None
         return normalize_utc(datetime.fromisoformat(row["last_collected_at"]))
 
+    def get_earliest_record_at(self, agent: SupportedAgent) -> datetime | None:
+        """Return the earliest stored record's timestamp for an agent, or None if it has none."""
+        row = self._connection.execute(
+            "SELECT MIN(occurred_at) AS earliest FROM events WHERE agent = ?",
+            (agent.value,),
+        ).fetchone()
+        if row is None or row["earliest"] is None:
+            return None
+        return normalize_utc(datetime.fromisoformat(row["earliest"]))
+
     def set_checkpoint(self, agent: SupportedAgent, occurred_at: datetime) -> None:
         """Record the latest collected instant for an agent."""
         occurred_at_utc = normalize_utc(occurred_at)

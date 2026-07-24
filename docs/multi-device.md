@@ -17,9 +17,9 @@ Do not rename another device's directory or edit another device's records. A dev
 After choosing a profile repository, configure that installation locally:
 
 ```sh
-agent-usage init --repo OWNER/PROFILE-REPO
-agent-usage collect
-agent-usage publish
+tomax init --repo OWNER/PROFILE-REPO
+tomax collect
+tomax publish
 ```
 
 `init` updates local configuration only. `collect` imports new local usage into the private ledger. `publish` requires an authenticated GitHub CLI session, writes this installation's device partition, fetches and rebases the configured branch, and uses bounded retries for concurrent device publishes. It never force-pushes.

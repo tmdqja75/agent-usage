@@ -1,9 +1,9 @@
 # Dashboard UI
 
 React + Vite + visx source for the interactive localhost dashboard served by
-`agent-usage dashboard`.
+`tomax dashboard`.
 
-**You normally never build this by hand.** The `agent-usage dashboard` command
+**You normally never build this by hand.** The `tomax dashboard` command
 builds it on demand (via `dashboard/ui_build.py`), caching `dist/` and rebuilding
 only when this source changes. `node_modules/` and `dist/` are gitignored.
 

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let `agent-usage dashboard` serve its React UI in Korean or English via a new `--lang {en,ko}` CLI flag, translating static titles/legends/states and switching number/date formatting, while leaving skill/MCP/agent names untouched.
+**Goal:** Let `tomax dashboard` serve its React UI in Korean or English via a new `--lang {en,ko}` CLI flag, translating static titles/legends/states and switching number/date formatting, while leaving skill/MCP/agent names untouched.
 
 **Architecture:** A `--lang` CLi flag flows through `commands/dashboard.py` into `dashboard/server.py`, which injects `window.__LANG__` into the served `index.html` before the app bundle loads. The React app reads it once at startup via a new `src/i18n.ts` module (`getLang()`, `getLocale()`, `t(key)`) with no runtime switcher, no i18n library, no `data.json` changes.
 
@@ -12,7 +12,7 @@
 
 - Full string/translation inventory, CLI flow, and the "Other" bucket exception are defined in `docs/superpowers/specs/2026-07-23-dashboard-multilingual-design.md` — treat that table as the source of truth for exact English/Korean copy.
 - Skill names (`data.skills[].name`), MCP names (`data.mcp[].name`), and agent names (`data.agents[].agent`, via `agentLabel()`) are never translated — passed through verbatim in both languages.
-- Exception: the server-generated `"Other"` bucket label (`OTHER_LABEL` in `src/agent_usage/render/_counters.py`) IS translated — it's a synthesized UI label, not real vendor data.
+- Exception: the server-generated `"Other"` bucket label (`OTHER_LABEL` in `src/tomax/render/_counters.py`) IS translated — it's a synthesized UI label, not real vendor data.
 - No in-app language switcher. Language is fixed for the life of the served session, chosen at launch via `--lang` (default `en`).
 - `dashboard-ui/` has no JS test runner configured (no vitest/jest, no `.test.*` files, `package.json` scripts are only `dev`/`build`/`preview`). Per YAGNI, this plan does not add one — frontend tasks are verified by `npm run build` (TypeScript compiles clean) plus a final manual/proofshot check, not automated unit tests. Python-side changes use the repo's existing `pytest` setup.
 - The per-day calendar tooltip title (raw `YYYY-MM-DD` string) stays unformatted in both languages — it's unambiguous ISO, not natural-language text.
@@ -22,8 +22,8 @@
 ### Task 1: Thread `--lang` through the CLI and `dashboard` command
 
 **Files:**
-- Modify: `src/agent_usage/cli.py` (`dashboard` command, ~line 129-163)
-- Modify: `src/agent_usage/commands/dashboard.py` (`run(...)`, whole file)
+- Modify: `src/tomax/cli.py` (`dashboard` command, ~line 129-163)
+- Modify: `src/tomax/commands/dashboard.py` (`run(...)`, whole file)
 - Test: `tests/commands/test_cli.py`
 - Test: `tests/commands/test_dashboard_cli.py`
 
@@ -53,7 +53,7 @@ Expected: FAIL (no `--lang` option registered — typer reports "No such option"
 
 - [ ] **Step 3: Add `--lang` to the `dashboard` CLI command**
 
-In `src/agent_usage/cli.py`, inside `def dashboard(...)` (~line 130), add the parameter after `pie_top_n`:
+In `src/tomax/cli.py`, inside `def dashboard(...)` (~line 130), add the parameter after `pie_top_n`:
 
 ```python
     pie_top_n: int = typer.Option(
@@ -79,7 +79,7 @@ Expected: PASS
 
 - [ ] **Step 5: Update `commands/dashboard.py::run()` to accept and forward `lang`**
 
-In `src/agent_usage/commands/dashboard.py`, add `lang: str,` to the `run(...)` signature (after `today: date,`, before `tmp_stage_dir: Path,` — keyword-only params, order among keyword-only args doesn't matter functionally, but keep it readable next to `pie_top_n`):
+In `src/tomax/commands/dashboard.py`, add `lang: str,` to the `run(...)` signature (after `today: date,`, before `tmp_stage_dir: Path,` — keyword-only params, order among keyword-only args doesn't matter functionally, but keep it readable next to `pie_top_n`):
 
 ```python
 def run(
@@ -131,7 +131,7 @@ Expected: PASS (all tests, including the two updated ones and the new one)
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/agent_usage/cli.py src/agent_usage/commands/dashboard.py tests/commands/test_cli.py tests/commands/test_dashboard_cli.py
+git add src/tomax/cli.py src/tomax/commands/dashboard.py tests/commands/test_cli.py tests/commands/test_dashboard_cli.py
 git commit -m "feat(cli): add --lang flag to dashboard command"
 ```
 
@@ -140,7 +140,7 @@ git commit -m "feat(cli): add --lang flag to dashboard command"
 ### Task 2: Inject `window.__LANG__` into the served HTML
 
 **Files:**
-- Modify: `src/agent_usage/dashboard/server.py` (whole file)
+- Modify: `src/tomax/dashboard/server.py` (whole file)
 - Test: `tests/dashboard/test_server.py`
 
 **Interfaces:**
@@ -183,7 +183,7 @@ Expected: FAIL (`make_server()` raises `TypeError: unexpected keyword argument '
 
 - [ ] **Step 3: Implement HTML injection in `server.py`**
 
-Replace the full contents of `src/agent_usage/dashboard/server.py` with:
+Replace the full contents of `src/tomax/dashboard/server.py` with:
 
 ```python
 """Serve the interactive dashboard on localhost: committed dist/ plus injected data.json."""
@@ -278,7 +278,7 @@ def serve(
     server = make_server(data, dist_dir=dist_dir, host=host, port=port, lang=lang)
     actual_port = server.server_address[1]
     url = f"http://{host}:{actual_port}"
-    print(f"agent-usage: dashboard serving at {url} (Ctrl-C to stop)")
+    print(f"tomax: dashboard serving at {url} (Ctrl-C to stop)")
     if open_browser:
         webbrowser.open(url)
     try:
@@ -298,7 +298,7 @@ Expected: PASS (all tests in the file, including the two pre-existing ones — t
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/dashboard/server.py tests/dashboard/test_server.py
+git add src/tomax/dashboard/server.py tests/dashboard/test_server.py
 git commit -m "feat(dashboard): inject window.__LANG__ into served index.html"
 ```
 
@@ -783,7 +783,7 @@ git commit -m "feat(dashboard-ui): translate agent ring center label and empty s
 
 **Interfaces:**
 - Consumes: `t` from `"@/i18n"` (Task 3).
-- Produces: nothing consumed by later tasks — leaf. Real skill/MCP `name` values are passed through unchanged; only the literal `"Other"` bucket label (matching `OTHER_LABEL` in `src/agent_usage/render/_counters.py`) is swapped for its translation.
+- Produces: nothing consumed by later tasks — leaf. Real skill/MCP `name` values are passed through unchanged; only the literal `"Other"` bucket label (matching `OTHER_LABEL` in `src/tomax/render/_counters.py`) is swapped for its translation.
 
 - [ ] **Step 1: Update `UsageDonut.tsx`**
 
@@ -807,7 +807,7 @@ import { t } from "@/i18n";
 
 export type UsageDatum = { name: string; count: number };
 
-// Matches OTHER_LABEL in src/agent_usage/render/_counters.py — a
+// Matches OTHER_LABEL in src/tomax/render/_counters.py — a
 // server-synthesized bucket, not a real skill/MCP name, so it's translated.
 const OTHER_LABEL = "Other";
 
@@ -1077,7 +1077,7 @@ Expected: PASS (all tests, including the Task 1/2 additions)
 
 - [ ] **Step 2: Force a fresh UI build and launch in English**
 
-Run: `agent-usage dashboard --rebuild --no-open --port 8931`
+Run: `tomax dashboard --rebuild --no-open --port 8931`
 
 Open `http://127.0.0.1:8931` in a browser. Confirm:
 - Titles read "Total Token Usage", "Usage by Agent", "Skill Usage", "MCP Usage", "Activity"
@@ -1089,7 +1089,7 @@ Stop the server with Ctrl-C.
 
 - [ ] **Step 3: Launch in Korean and verify**
 
-Run: `agent-usage dashboard --no-open --port 8931 --lang ko`
+Run: `tomax dashboard --no-open --port 8931 --lang ko`
 
 Open `http://127.0.0.1:8931`. Confirm:
 - Page `<html>` tag has `lang="ko"` (view page source)

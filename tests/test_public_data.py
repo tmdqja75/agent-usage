@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, timezone
 
-from agent_usage.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
-from agent_usage.privacy import PrivacyPolicy
-from agent_usage.public_data import (
+from tomax.models import NormalizedUsageRecord, SourceStatus, SupportedAgent, TokenUsage
+from tomax.privacy import PrivacyPolicy
+from tomax.public_data import (
     SCHEMA_VERSION,
     build_daily_record,
     stage_daily_records,

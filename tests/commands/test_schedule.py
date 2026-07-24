@@ -10,9 +10,9 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from agent_usage.commands import schedule as schedule_command
-from agent_usage.config import load_config
-from agent_usage.schedule import launchd
+from tomax.commands import schedule as schedule_command
+from tomax.config import load_config
+from tomax.schedule import launchd
 
 
 def _fake_runner(returncode: int = 0):
@@ -29,7 +29,7 @@ def test_install_marks_the_schedule_enabled_in_config(tmp_path: Path, monkeypatc
     result = schedule_command.install(
         config_path=config_path,
         daily_at="09:00",
-        executable="agent-usage",
+        executable="tomax",
         log_dir=tmp_path / "logs",
         runner=_fake_runner(),
     )
@@ -51,7 +51,7 @@ def test_install_does_not_enable_config_when_launchctl_load_fails(tmp_path: Path
         schedule_command.install(
             config_path=config_path,
             daily_at="09:00",
-            executable="agent-usage",
+            executable="tomax",
             log_dir=tmp_path / "logs",
             runner=_fake_runner(returncode=1),
         )
@@ -71,7 +71,7 @@ def test_install_rejects_a_malformed_time_without_writing_a_plist(
         schedule_command.install(
             config_path=config_path,
             daily_at="9am",
-            executable="agent-usage",
+            executable="tomax",
             log_dir=tmp_path / "logs",
             runner=_fake_runner(),
         )
@@ -86,7 +86,7 @@ def test_remove_marks_the_schedule_disabled_in_config(tmp_path: Path, monkeypatc
     schedule_command.install(
         config_path=config_path,
         daily_at="09:00",
-        executable="agent-usage",
+        executable="tomax",
         log_dir=tmp_path / "logs",
         runner=_fake_runner(),
     )
@@ -107,7 +107,7 @@ def test_remove_does_not_disable_config_when_launchctl_unload_fails(tmp_path: Pa
     schedule_command.install(
         config_path=config_path,
         daily_at="09:00",
-        executable="agent-usage",
+        executable="tomax",
         log_dir=tmp_path / "logs",
         runner=_fake_runner(),
     )
@@ -123,13 +123,13 @@ def test_remove_does_not_disable_config_when_launchctl_unload_fails(tmp_path: Pa
 def test_remove_preserves_other_config_fields(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(launchd, "launch_agents_dir", lambda: tmp_path / "LaunchAgents")
     config_path = tmp_path / "config.json"
-    from agent_usage.config import AppConfig, save_config
+    from tomax.config import AppConfig, save_config
 
     save_config(config_path, AppConfig(repo_target="tmdqja75/tmdqja75"))
     schedule_command.install(
         config_path=config_path,
         daily_at="09:00",
-        executable="agent-usage",
+        executable="tomax",
         log_dir=tmp_path / "logs",
         runner=_fake_runner(),
     )
@@ -146,7 +146,7 @@ def test_status_reflects_the_launchd_state(tmp_path: Path, monkeypatch) -> None:
     schedule_command.install(
         config_path=config_path,
         daily_at="09:00",
-        executable="agent-usage",
+        executable="tomax",
         log_dir=tmp_path / "logs",
         runner=_fake_runner(),
     )

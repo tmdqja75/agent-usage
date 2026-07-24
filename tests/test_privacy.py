@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_usage.config import AppConfig
-from agent_usage.privacy import HIDDEN_NAME, PrivacyPolicy, is_builtin_denylisted
+from tomax.config import AppConfig
+from tomax.privacy import HIDDEN_NAME, PrivacyPolicy, is_builtin_denylisted
 
 
 @pytest.mark.parametrize(
@@ -115,7 +115,7 @@ def test_sanitized_output_never_contains_fixture_sensitive_values() -> None:
     policy = PrivacyPolicy()
     fixture_sensitive_names = [
         "aws-secret-access-key-rotator",
-        "/Users/admin/Documents/agent-usage/secret-notes",
+        "/Users/admin/Documents/tomax/secret-notes",
         "prod-database-credential-refresh",
     ]
 

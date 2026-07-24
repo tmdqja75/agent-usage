@@ -13,7 +13,7 @@ def test_build_writes_readme_and_png(tmp_path, monkeypatch):
     monkeypatch.setattr(bpd, "ensure_build", lambda ui_dir, force=False: ui_dir)
 
     readme = tmp_path / "README.md"
-    png = tmp_path / "assets" / "agent-usage" / "dashboard.png"
+    png = tmp_path / "assets" / "tomax" / "dashboard.png"
     changed = bpd.build(
         data_dir=tmp_path / "data" / "v1" / "devices",
         readme_path=readme,
@@ -25,4 +25,4 @@ def test_build_writes_readme_and_png(tmp_path, monkeypatch):
 
     assert changed is True
     assert png.is_file()
-    assert "assets/agent-usage/dashboard.png" in readme.read_text(encoding="utf-8")
+    assert "assets/tomax/dashboard.png" in readme.read_text(encoding="utf-8")

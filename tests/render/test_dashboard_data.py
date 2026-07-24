@@ -1,6 +1,6 @@
 from datetime import date
 
-from agent_usage.render.dashboard_data import build_dashboard_data
+from tomax.render.dashboard_data import build_dashboard_data
 
 _STATUS = "available_with_activity"
 

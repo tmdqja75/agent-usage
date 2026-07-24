@@ -4,7 +4,7 @@
 
 **Goal:** Let users configure how far back the first-ever collection for each agent reaches — either a custom start date or unbounded ("ALL" history) — and, when they widen that window after already collecting data, backfill the gap between the new start date and their earliest existing record without disturbing the forward checkpoint.
 
-**Architecture:** A new `AppConfig.initial_collection_start` field (`None` | `"ALL"` | `"YYYY-MM-DD"`) resolves to a concrete UTC `datetime` in `config.py`. `collect_agent` gains a second, independent "backfill" window alongside its existing forward "checkpoint → now" window, computed by comparing the configured start to the agent's earliest stored record. A new `agent-usage config start-date` CLI command writes the setting; `collect` and `doctor` both resolve and use it, so manual and scheduled runs behave identically.
+**Architecture:** A new `AppConfig.initial_collection_start` field (`None` | `"ALL"` | `"YYYY-MM-DD"`) resolves to a concrete UTC `datetime` in `config.py`. `collect_agent` gains a second, independent "backfill" window alongside its existing forward "checkpoint → now" window, computed by comparing the configured start to the agent's earliest stored record. A new `tomax config start-date` CLI command writes the setting; `collect` and `doctor` both resolve and use it, so manual and scheduled runs behave identically.
 
 **Tech Stack:** Python, typer (CLI), sqlite3, pytest.
 
@@ -20,7 +20,7 @@
 ### Task 1: `time_window.py` — drop the fixed backfill end, add `EPOCH_START`
 
 **Files:**
-- Modify: `src/agent_usage/time_window.py:66-69`
+- Modify: `src/tomax/time_window.py:66-69`
 - Test: `tests/test_time_window.py`
 
 **Interfaces:**
@@ -39,7 +39,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from agent_usage.time_window import DEFAULT_INITIAL_START, EPOCH_START, TimeWindow, normalize_utc
+from tomax.time_window import DEFAULT_INITIAL_START, EPOCH_START, TimeWindow, normalize_utc
 
 
 UTC = timezone.utc
@@ -70,7 +70,7 @@ Expected: FAIL — `ImportError: cannot import name 'DEFAULT_INITIAL_START'`
 
 - [ ] **Step 3: Replace the constant in `time_window.py`**
 
-At the bottom of `src/agent_usage/time_window.py`, replace:
+At the bottom of `src/tomax/time_window.py`, replace:
 
 ```python
 INITIAL_COLLECTION_WINDOW = TimeWindow(
@@ -97,7 +97,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/time_window.py tests/test_time_window.py
+git add src/tomax/time_window.py tests/test_time_window.py
 git commit -m "feat(time-window): replace fixed initial backfill window with configurable start constants"
 ```
 
@@ -106,7 +106,7 @@ git commit -m "feat(time-window): replace fixed initial backfill window with con
 ### Task 2: `LedgerRepository.get_earliest_record_at`
 
 **Files:**
-- Modify: `src/agent_usage/ledger/repository.py`
+- Modify: `src/tomax/ledger/repository.py`
 - Test: `tests/ledger/test_repository.py`
 
 **Interfaces:**
@@ -155,7 +155,7 @@ Expected: FAIL with `AttributeError: 'LedgerRepository' object has no attribute 
 
 - [ ] **Step 3: Implement `get_earliest_record_at`**
 
-Add to `src/agent_usage/ledger/repository.py`, directly below `get_checkpoint`:
+Add to `src/tomax/ledger/repository.py`, directly below `get_checkpoint`:
 
 ```python
     def get_earliest_record_at(self, agent: SupportedAgent) -> datetime | None:
@@ -177,7 +177,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/ledger/repository.py tests/ledger/test_repository.py
+git add src/tomax/ledger/repository.py tests/ledger/test_repository.py
 git commit -m "feat(ledger): add get_earliest_record_at for per-agent backfill gap detection"
 ```
 
@@ -186,11 +186,11 @@ git commit -m "feat(ledger): add get_earliest_record_at for per-agent backfill g
 ### Task 3: `AppConfig.initial_collection_start` + resolver
 
 **Files:**
-- Modify: `src/agent_usage/config.py`
+- Modify: `src/tomax/config.py`
 - Test: `tests/test_config.py`
 
 **Interfaces:**
-- Consumes: `DEFAULT_INITIAL_START`, `EPOCH_START` from `agent_usage.time_window` (Task 1).
+- Consumes: `DEFAULT_INITIAL_START`, `EPOCH_START` from `tomax.time_window` (Task 1).
 - Produces: `AppConfig.initial_collection_start: str | None` field; `resolve_initial_collection_start(value: str | None) -> datetime`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -200,8 +200,8 @@ Add to `tests/test_config.py`:
 ```python
 from datetime import datetime, timezone
 
-from agent_usage.config import resolve_initial_collection_start
-from agent_usage.time_window import DEFAULT_INITIAL_START, EPOCH_START
+from tomax.config import resolve_initial_collection_start
+from tomax.time_window import DEFAULT_INITIAL_START, EPOCH_START
 
 UTC = timezone.utc
 
@@ -245,12 +245,12 @@ Expected: FAIL — `TypeError: AppConfig.__init__() got an unexpected keyword ar
 
 - [ ] **Step 3: Implement the field, validation, and resolver**
 
-In `src/agent_usage/config.py`, add imports at the top:
+In `src/tomax/config.py`, add imports at the top:
 
 ```python
 from datetime import datetime
 
-from agent_usage.time_window import DEFAULT_INITIAL_START, EPOCH_START, UTC
+from tomax.time_window import DEFAULT_INITIAL_START, EPOCH_START, UTC
 ```
 
 (`UTC` doesn't currently exist as a public name in `time_window.py` — check Task 1's file: it's `UTC = timezone.utc` at module level, already public. Import it directly.)
@@ -309,7 +309,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/config.py tests/test_config.py
+git add src/tomax/config.py tests/test_config.py
 git commit -m "feat(config): add initial_collection_start setting and resolver"
 ```
 
@@ -318,7 +318,7 @@ git commit -m "feat(config): add initial_collection_start setting and resolver"
 ### Task 4: `collect.py` — parameterized start + backfill gap window
 
 **Files:**
-- Modify: `src/agent_usage/commands/collect.py`
+- Modify: `src/tomax/commands/collect.py`
 - Test: `tests/commands/test_collect.py`
 
 **Interfaces:**
@@ -332,7 +332,7 @@ In `tests/commands/test_collect.py`:
 1. Change the import line:
 
 ```python
-from agent_usage.time_window import DEFAULT_INITIAL_START
+from tomax.time_window import DEFAULT_INITIAL_START
 ```
 
 2. Replace `test_collection_window_uses_the_initial_backfill_when_no_checkpoint`:
@@ -522,7 +522,7 @@ def test_collect_agent_backfills_the_gap_without_disturbing_the_forward_checkpoi
 Also add `backfill_window` and `collect_agent` to the imports at the top of the test file:
 
 ```python
-from agent_usage.commands.collect import (
+from tomax.commands.collect import (
     AgentCollectionResult,
     backfill_window,
     collect_agent,
@@ -542,7 +542,7 @@ Expected: FAIL — `ImportError: cannot import name 'backfill_window'` and `Type
 Update the import line:
 
 ```python
-from agent_usage.time_window import DEFAULT_INITIAL_START, TimeWindow
+from tomax.time_window import DEFAULT_INITIAL_START, TimeWindow
 ```
 
 Update `collection_window`:
@@ -697,7 +697,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/commands/collect.py tests/commands/test_collect.py
+git add src/tomax/commands/collect.py tests/commands/test_collect.py
 git commit -m "feat(collect): add configurable start date and backfill gap window"
 ```
 
@@ -706,25 +706,25 @@ git commit -m "feat(collect): add configurable start date and backfill gap windo
 ### Task 5: `cli.py` — `config start-date` command + wire into `collect`
 
 **Files:**
-- Modify: `src/agent_usage/cli.py`
+- Modify: `src/tomax/cli.py`
 - Test: `tests/test_cli.py` (create if it doesn't already cover CLI commands — check first with `ls tests/test_cli.py` or `grep -rl "from typer.testing" tests/`)
 
 **Interfaces:**
 - Consumes: `resolve_initial_collection_start` (Task 3), `collect_command.collect_all(..., configured_start=...)` (Task 4).
-- Produces: `agent-usage config start-date --date/--all` command.
+- Produces: `tomax config start-date --date/--all` command.
 
 - [ ] **Step 1: Check for an existing CLI test harness**
 
 Run: `grep -rl "CliRunner" tests/ 2>/dev/null`
 
-If a file is found (e.g. `tests/test_cli.py`), read it to match its existing style (fixtures for `config_path`/`ledger_path` via `monkeypatch`, etc.) before writing new tests. If none is found, use the pattern in Step 1a below with `typer.testing.CliRunner` and `monkeypatch.setattr` on `agent_usage.cli.config_file_path`/`ledger_file_path` (mirroring how `config_file_path()`/`ledger_file_path()` are called directly, no dependency injection exists today) — patch them to return `tmp_path` locations.
+If a file is found (e.g. `tests/test_cli.py`), read it to match its existing style (fixtures for `config_path`/`ledger_path` via `monkeypatch`, etc.) before writing new tests. If none is found, use the pattern in Step 1a below with `typer.testing.CliRunner` and `monkeypatch.setattr` on `tomax.cli.config_file_path`/`ledger_file_path` (mirroring how `config_file_path()`/`ledger_file_path()` are called directly, no dependency injection exists today) — patch them to return `tmp_path` locations.
 
 - [ ] **Step 1a: Write the failing tests**
 
 Create or append to `tests/test_cli.py`:
 
 ```python
-"""Tests for the agent-usage CLI."""
+"""Tests for the tomax CLI."""
 
 from __future__ import annotations
 
@@ -732,7 +732,7 @@ import json
 
 from typer.testing import CliRunner
 
-from agent_usage import cli
+from tomax import cli
 
 runner = CliRunner()
 
@@ -797,7 +797,7 @@ from dataclasses import replace
 ```
 
 ```python
-from agent_usage.config import (
+from tomax.config import (
     config_file_path,
     data_dir,
     ledger_file_path,
@@ -807,12 +807,12 @@ from agent_usage.config import (
 )
 ```
 
-(This replaces the current `from agent_usage.config import config_file_path, data_dir, ledger_file_path, load_config` line — add `resolve_initial_collection_start` and `save_config`.)
+(This replaces the current `from tomax.config import config_file_path, data_dir, ledger_file_path, load_config` line — add `resolve_initial_collection_start` and `save_config`.)
 
 Add the sub-app near the existing `schedule_app` declaration:
 
 ```python
-config_app = typer.Typer(help="Manage local agent-usage configuration.", no_args_is_help=True)
+config_app = typer.Typer(help="Manage local tomax configuration.", no_args_is_help=True)
 app.add_typer(config_app, name="config")
 ```
 
@@ -841,7 +841,7 @@ def config_start_date(
         raise typer.BadParameter(str(error)) from error
 
     save_config(config_file_path(), config)
-    typer.echo(f"agent-usage: initial collection start set to {value}")
+    typer.echo(f"tomax: initial collection start set to {value}")
 ```
 
 Update the `collect` command to resolve and pass `configured_start`:
@@ -873,7 +873,7 @@ def collect(
             f"(observed {result.records_observed}, inserted {result.records_inserted})"
         )
     if dry_run:
-        typer.echo("agent-usage: dry run, nothing written")
+        typer.echo("tomax: dry run, nothing written")
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -884,8 +884,8 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/cli.py tests/test_cli.py
-git commit -m "feat(cli): add 'agent-usage config start-date' and wire it into collect"
+git add src/tomax/cli.py tests/test_cli.py
+git commit -m "feat(cli): add 'tomax config start-date' and wire it into collect"
 ```
 
 ---
@@ -893,8 +893,8 @@ git commit -m "feat(cli): add 'agent-usage config start-date' and wire it into c
 ### Task 6: `doctor.py` — surface the configured start date
 
 **Files:**
-- Modify: `src/agent_usage/commands/doctor.py`
-- Modify: `src/agent_usage/cli.py:52-69` (the `doctor` command)
+- Modify: `src/tomax/commands/doctor.py`
+- Modify: `src/tomax/cli.py:52-69` (the `doctor` command)
 - Test: `tests/commands/test_doctor.py` (check `find tests -iname "*doctor*"` first; if none exists, create it following the style of `tests/commands/test_collect.py`)
 
 **Interfaces:**
@@ -909,7 +909,7 @@ Read whatever is found to match its fixture style before adding tests. If nothin
 
 - [ ] **Step 2: Write the failing test**
 
-Add to `tests/commands/test_doctor.py` (create the file with this content if it doesn't exist, following the `_source_paths`/`NOW` conventions from `tests/commands/test_collect.py` — import `run_doctor` from `agent_usage.commands.doctor`):
+Add to `tests/commands/test_doctor.py` (create the file with this content if it doesn't exist, following the `_source_paths`/`NOW` conventions from `tests/commands/test_collect.py` — import `run_doctor` from `tomax.commands.doctor`):
 
 ```python
 """Tests for local configuration and per-agent source diagnostics."""
@@ -918,8 +918,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from agent_usage.commands.doctor import run_doctor
-from agent_usage.config import AppConfig, config_file_path, save_config
+from tomax.commands.doctor import run_doctor
+from tomax.config import AppConfig, config_file_path, save_config
 
 UTC = timezone.utc
 NOW = datetime(2026, 7, 10, 12, 0, tzinfo=UTC)
@@ -964,7 +964,7 @@ Expected: FAIL — `TypeError: DoctorReport.__init__() got an unexpected keyword
 Update imports:
 
 ```python
-from agent_usage.config import load_config, resolve_initial_collection_start
+from tomax.config import load_config, resolve_initial_collection_start
 ```
 
 Add the field to `DoctorReport`:
@@ -1032,7 +1032,7 @@ Expected: PASS
 
 - [ ] **Step 6: Update the `doctor` CLI command to display the setting**
 
-In `src/agent_usage/cli.py`, update the `doctor` command body:
+In `src/tomax/cli.py`, update the `doctor` command body:
 
 ```python
 @app.command()
@@ -1064,7 +1064,7 @@ Expected: PASS (all tests, including Tasks 1-5's)
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/agent_usage/commands/doctor.py src/agent_usage/cli.py tests/commands/test_doctor.py
+git add src/tomax/commands/doctor.py src/tomax/cli.py tests/commands/test_doctor.py
 git commit -m "feat(doctor): surface configured initial collection start"
 ```
 
@@ -1073,6 +1073,6 @@ git commit -m "feat(doctor): surface configured initial collection start"
 ## Post-plan verification
 
 - [ ] Run `pytest -v` from the repo root — full suite passes.
-- [ ] Run `agent-usage config start-date --date 2026-01-01` then `agent-usage doctor` locally — confirm the new line shows `2026-01-01`.
-- [ ] Run `agent-usage config start-date --all` then `agent-usage doctor` — confirm it shows `ALL`.
-- [ ] Run `agent-usage config start-date --date 2026-01-01 --all` — confirm it's rejected with a clear error and nothing is written.
+- [ ] Run `tomax config start-date --date 2026-01-01` then `tomax doctor` locally — confirm the new line shows `2026-01-01`.
+- [ ] Run `tomax config start-date --all` then `tomax doctor` — confirm it shows `ALL`.
+- [ ] Run `tomax config start-date --date 2026-01-01 --all` — confirm it's rejected with a clear error and nothing is written.

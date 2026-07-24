@@ -11,9 +11,9 @@ from datetime import datetime, timezone
 
 from hermes_state import build_hermes_state_db
 
-from agent_usage.adapters import hermes
-from agent_usage.models import SourceStatus, SupportedAgent
-from agent_usage.time_window import TimeWindow
+from tomax.adapters import hermes
+from tomax.models import SourceStatus, SupportedAgent
+from tomax.time_window import TimeWindow
 
 UTC = timezone.utc
 

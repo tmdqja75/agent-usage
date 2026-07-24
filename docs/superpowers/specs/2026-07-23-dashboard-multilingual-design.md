@@ -5,7 +5,7 @@ Status: Approved (design), pending implementation plan
 
 ## Goal
 
-Let the interactive localhost dashboard (`agent-usage dashboard`) render its UI
+Let the interactive localhost dashboard (`tomax dashboard`) render its UI
 in Korean or English, chosen via a CLI flag. Covers: static section titles,
 chart legends/labels, loading/error/empty states, number formatting (K/M/B/T
 vs 만/억/조), and date formatting.
@@ -24,7 +24,7 @@ vs 만/억/조), and date formatting.
 ## CLI flag → UI flow
 
 - Add `--lang {en,ko}` (default `en`) to the `dashboard` CLI command
-  (`src/agent_usage/cli.py`), validated against the fixed choice set.
+  (`src/tomax/cli.py`), validated against the fixed choice set.
 - Thread it through `commands/dashboard.py::run(...)` as a `lang: str` param
   into `dashboard/server.py::serve(...)`.
 - `serve()` sets `<html lang="...">` and injects a small inline script (e.g.

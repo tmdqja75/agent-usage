@@ -36,9 +36,9 @@ def test_multi_device_guide_documents_safe_device_partitions_and_profile_workflo
         "opaque device ID",
         "data/v1/devices/<opaque-device-id>/<YYYY-MM-DD>.json",
         "GitHub Actions",
-        "agent-usage init --repo OWNER/PROFILE-REPO",
-        "agent-usage collect",
-        "agent-usage publish",
+        "tomax init --repo OWNER/PROFILE-REPO",
+        "tomax collect",
+        "tomax publish",
     ):
         assert required in text
 
@@ -69,12 +69,12 @@ def test_collector_ci_runs_the_release_verification_commands() -> None:
         "actions/setup-python@v6",
         "astral-sh/setup-uv@v8.3.2",
         "uv sync --dev --locked",
-        'git config --global user.name "agent-usage CI"',
-        'git config --global user.email "agent-usage-ci@users.noreply.github.com"',
+        'git config --global user.name "tomax CI"',
+        'git config --global user.email "tomax-ci@users.noreply.github.com"',
         "uv run pytest -q",
         "uv run ruff check .",
         "uv build",
-        "uv run agent-usage --help",
+        "uv run tomax --help",
     ):
         assert required in text
 

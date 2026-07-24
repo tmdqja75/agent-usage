@@ -19,8 +19,8 @@ markdown tables with a single full-page screenshot of the React dashboard,
 produced with a headless Playwright/Chromium browser. Apply to both render
 paths:
 
-- **Local** — `agent-usage render` (this device only, into
-  `agent-usage-preview/`).
+- **Local** — `tomax render` (this device only, into
+  `tomax-preview/`).
 - **CI** — `scripts/build_profile_dashboard.py`, run by the profile
   repository's GitHub Action (`templates/github-workflow.yml`), cross-device,
   producing the public README.
@@ -43,7 +43,7 @@ paths:
 
 ## Architecture
 
-### New module: `src/agent_usage/dashboard/export.py`
+### New module: `src/tomax/dashboard/export.py`
 
 Single entry point:
 
@@ -99,9 +99,9 @@ launch. If it still fails, raise a clear user-facing error.
 ### `commands/render.py` rewrite
 
 - Managed section becomes screenshot-only. Write one asset:
-  `assets/agent-usage/dashboard.png`.
+  `assets/tomax/dashboard.png`.
 - Replace the five `render_dashboard(...)` chart writes with a single
-  `export_dashboard_png(output_path=<preview>/assets/agent-usage/dashboard.png,
+  `export_dashboard_png(output_path=<preview>/assets/tomax/dashboard.png,
   ledger_path=..., all_devices=False, privacy_policy=..., today=..., ui_dir=...,
   tmp_stage_dir=...)`.
 - README body: `update_readme(existing, dashboard_markdown)` where
@@ -117,12 +117,12 @@ launch. If it still fails, raise a clear user-facing error.
   existing `MARKER_START` / `MARKER_END`:
 
   ```markdown
-  <!-- agent-usage:start -->
+  <!-- tomax:start -->
   ## Agent Usage
 
-  ![Agent Usage dashboard](assets/agent-usage/dashboard.png)
+  ![Agent Usage dashboard](assets/tomax/dashboard.png)
 
-  <!-- agent-usage:end -->
+  <!-- tomax:end -->
   ```
 
   (Exact heading/alt text finalized in the plan.) Keep `update_readme`
@@ -135,7 +135,7 @@ launch. If it still fails, raise a clear user-facing error.
 
 ### Delete Plotly
 
-- Delete `src/agent_usage/render/plotly.py`.
+- Delete `src/tomax/render/plotly.py`.
 - Delete `tests/render/test_plotly.py`.
 - `pyproject.toml`: remove `plotly` and `kaleido`; add `playwright`.
 - Remove now-dead helpers in `render/_counters.py` only if nothing else uses
@@ -147,7 +147,7 @@ launch. If it still fails, raise a clear user-facing error.
 
 - Replace the plotly chart CLI flags
   (`--rolling-chart/--total-chart/--skills-chart/--mcp-chart`) with a single
-  `--dashboard-png assets/agent-usage/dashboard.png`.
+  `--dashboard-png assets/tomax/dashboard.png`.
 - Assemble the cross-device payload (same aggregation the Action already
   performs from `data/v1/devices`) and call `export_dashboard_png(...)` with
   `all_devices=True` semantics and `ui_dir` pointing at the checked-out
@@ -158,11 +158,11 @@ launch. If it still fails, raise a clear user-facing error.
 
 - Add `actions/setup-node` + enable pnpm (corepack or `pnpm/action-setup`).
 - Build the React dist (via `ensure_build`, invoked inside the script, or an
-  explicit `pnpm install && pnpm build` step in `.agent-usage-src/dashboard-ui`).
-- After `pip install ./.agent-usage-src`: `python -m playwright install
+  explicit `pnpm install && pnpm build` step in `.tomax-src/dashboard-ui`).
+- After `pip install ./.tomax-src`: `python -m playwright install
   --with-deps chromium`.
 - Update the render step to pass `--dashboard-png ...`.
-- Update `git add` to `README.md assets/agent-usage/dashboard.png` (single
+- Update `git add` to `README.md assets/tomax/dashboard.png` (single
   asset); drop stale chart paths.
 - Keep existing concurrency/permissions/trigger scope.
 
@@ -181,7 +181,7 @@ ledger / data/v1/devices
  Playwright Chromium (headless, dark, reduced-motion, 2s settle)
         │
         ▼
- full_page screenshot ──► assets/agent-usage/dashboard.png
+ full_page screenshot ──► assets/tomax/dashboard.png
         │
         ▼
  update_readme (screenshot-only managed section) ──► README.md

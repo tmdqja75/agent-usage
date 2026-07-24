@@ -4,7 +4,7 @@ Guidance for AI agents and contributors working in this repository.
 
 ## What this project is
 
-`agent-usage` is a macOS-first Python CLI that builds privacy-conscious, local
+`tomax` is a macOS-first Python CLI that builds privacy-conscious, local
 usage summaries for **Hermes Agent**, **Claude Code**, and **Codex**. It reads
 each supported local source read-only, normalizes only aggregation metadata, and
 keeps a private SQLite ledger. Optional publishing writes sanitized per-device,
@@ -18,7 +18,7 @@ See [README.md](README.md) for the user-facing guide.
 - Run tests: `uv run pytest -q`
 - Lint: `uv run ruff check .`
 - Build: `uv build`
-- CLI help: `uv run agent-usage --help`
+- CLI help: `uv run tomax --help`
 
 ### CLI commands
 
@@ -34,7 +34,7 @@ See [README.md](README.md) for the user-facing guide.
 
 ## Repository layout
 
-- `src/agent_usage/` — package source.
+- `src/tomax/` — package source.
   - `aggregate.py` — validation, rolling windows, daily/token totals, record aggregation.
   - `render/` — dashboard backends. `export.py` (screenshot via Playwright/Chromium),
     `dashboard_data.py` (interactive `data.json` builder), `_counters.py` (shared rank/bucket helpers, backend-neutral).
@@ -90,7 +90,7 @@ See [README.md](README.md) for the user-facing guide.
 - Skills/MCP pies bucket beyond `--pie-top-n` (default 6) into one `Other` entry.
 - `tokensChartType` is computed server-side in `render/dashboard_data.py` from
   the window span vs. `AppConfig.bar_chart_threshold_days` (default 15, set via
-  `agent-usage config bar-chart-threshold --days N`) — `"bar"` above the
+  `tomax config bar-chart-threshold --days N`) — `"bar"` above the
   threshold, `"area"` at or below it.
 - bklit gradients (Area fill, ring/pie glows) are the permitted chart-internal
   exception — do not add page/block CSS gradients.

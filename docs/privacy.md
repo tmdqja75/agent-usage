@@ -1,6 +1,6 @@
 # Privacy model
 
-`agent-usage` is designed to produce usage summaries without collecting or publishing session content. The first release is macOS-only and reads supported local agent sources **read-only**.
+`tomax` is designed to produce usage summaries without collecting or publishing session content. The first release is macOS-only and reads supported local agent sources **read-only**.
 
 ## What stays local
 
@@ -43,4 +43,4 @@ Skill and MCP names are shown by default only after the built-in sensitive-name 
 
 ## Before publishing
 
-Use `agent-usage collect --dry-run` to inspect collection status without changing the ledger. Use `agent-usage render` for a local preview. Do not put real session fixtures, transcripts, credentials, raw identifiers, or local paths in the collector repository or the profile repository.
+Use `tomax collect --dry-run` to inspect collection status without changing the ledger. Use `tomax render` for a local preview. Do not put real session fixtures, transcripts, credentials, raw identifiers, or local paths in the collector repository or the profile repository.

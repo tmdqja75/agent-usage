@@ -1,4 +1,4 @@
-from agent_usage.render._counters import OTHER_LABEL, bucket_top_n, rank_usage
+from tomax.render._counters import OTHER_LABEL, bucket_top_n, rank_usage
 
 
 def test_rank_usage_orders_by_count_then_name():

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_usage.commands.init import init
-from agent_usage.config import AppConfig, get_or_create_device_id, load_config, save_config
+from tomax.commands.init import init
+from tomax.config import AppConfig, get_or_create_device_id, load_config, save_config
 
 
 def test_init_sets_repo_target(tmp_path) -> None:

@@ -5,7 +5,7 @@
 First-run collection window is hardcoded (`INITIAL_COLLECTION_WINDOW`,
 2026-07-04 through 2026-07-18) in `time_window.py`. Users cannot choose
 how far back their initial backfill goes, nor collect their full local
-history. Applies to both manual `agent-usage collect` and the launchd
+history. Applies to both manual `tomax collect` and the launchd
 daily schedule (same code path, same config).
 
 ## Config
@@ -26,12 +26,12 @@ existing `display_timezone`/`schedule_time` validation.
 
 ## CLI
 
-New `agent-usage config` typer sub-app, alongside existing `schedule`
+New `tomax config` typer sub-app, alongside existing `schedule`
 sub-app:
 
 ```
-agent-usage config start-date --date 2026-01-01
-agent-usage config start-date --all
+tomax config start-date --date 2026-01-01
+tomax config start-date --all
 ```
 
 Mutually exclusive; exactly one required (`typer.BadParameter` otherwise).

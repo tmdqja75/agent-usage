@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_usage.publish.git import GitCommandError, PublishResult, clone_or_open, publish_device_partition
+from tomax.publish.git import GitCommandError, PublishResult, clone_or_open, publish_device_partition
 
 
 def _run(cwd: Path, *args: str) -> str:
@@ -213,7 +213,7 @@ def test_publish_raises_after_exhausting_retries_on_persistent_conflict(tmp_path
     repo_dir = _clone(origin, tmp_path / "clone")
     _write_device_file(repo_dir, "device-a", "2026-07-10.json")
 
-    import agent_usage.publish.git as git_module
+    import tomax.publish.git as git_module
 
     real_run = subprocess.run
 

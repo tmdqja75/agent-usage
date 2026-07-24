@@ -1,7 +1,7 @@
 from datetime import date
 from pathlib import Path
 
-from agent_usage.commands import render as render_command
+from tomax.commands import render as render_command
 
 
 def test_render_writes_screenshot_and_readme(tmp_path, monkeypatch):
@@ -26,9 +26,9 @@ def test_render_writes_screenshot_and_readme(tmp_path, monkeypatch):
     )
 
     assert calls["export"] == 1
-    assert (out / "assets" / "agent-usage" / "dashboard.png").is_file()
+    assert (out / "assets" / "tomax" / "dashboard.png").is_file()
     readme = (out / "README.md").read_text(encoding="utf-8")
-    assert "assets/agent-usage/dashboard.png" in readme
+    assert "assets/tomax/dashboard.png" in readme
     assert result.changed is True
 
 

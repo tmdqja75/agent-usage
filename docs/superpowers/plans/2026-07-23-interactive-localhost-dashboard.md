@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add an `agent-usage dashboard` command that serves an interactive localhost chart dashboard (bklit React charts) from local session data by default, or from multi-device data cloned from the GitHub profile repo with `--all-devices`.
+**Goal:** Add an `tomax dashboard` command that serves an interactive localhost chart dashboard (bklit React charts) from local session data by default, or from multi-device data cloned from the GitHub profile repo with `--all-devices`.
 
 **Architecture:** A pure Python data builder turns validated daily payloads (the same ones the Plotly path uses) into one `data.json`. Two source paths feed it: the local ledger, or a shallow `git clone` of the profile repo. Each time the `dashboard` command runs it builds the React UI on demand (cached; rebuilt only when the UI source changed), then a stdlib `http.server` serves that fresh build plus the in-memory `data.json`; the browser fetches `/data.json` when the page opens. The existing Plotly PNG dashboard is untouched.
 
@@ -27,8 +27,8 @@
 Move `rank_usage`, `bucket_top_n`, and `_OTHER_LABEL` out of `render/plotly.py` into a neutral module so the interactive path does not import the Plotly/Kaleido module. Re-export from `plotly.py` so its existing behavior and tests are unchanged.
 
 **Files:**
-- Create: `src/agent_usage/render/_counters.py`
-- Modify: `src/agent_usage/render/plotly.py` (remove the three definitions, import them instead)
+- Create: `src/tomax/render/_counters.py`
+- Modify: `src/tomax/render/plotly.py` (remove the three definitions, import them instead)
 - Test: `tests/render/test_counters.py`
 
 **Interfaces:**
@@ -38,7 +38,7 @@ Move `rank_usage`, `bucket_top_n`, and `_OTHER_LABEL` out of `render/plotly.py` 
 
 ```python
 # tests/render/test_counters.py
-from agent_usage.render._counters import OTHER_LABEL, bucket_top_n, rank_usage
+from tomax.render._counters import OTHER_LABEL, bucket_top_n, rank_usage
 
 
 def test_rank_usage_orders_by_count_then_name():
@@ -59,12 +59,12 @@ def test_bucket_top_n_no_overflow_keeps_all():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/render/test_counters.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agent_usage.render._counters'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tomax.render._counters'`
 
 - [ ] **Step 3: Create the shared module**
 
 ```python
-# src/agent_usage/render/_counters.py
+# src/tomax/render/_counters.py
 """Shared, render-backend-neutral helpers for ranking and bucketing usage counters."""
 
 from __future__ import annotations
@@ -90,11 +90,11 @@ def bucket_top_n(ranked: Sequence[tuple[str, int]], top_n: int) -> list[tuple[st
 
 - [ ] **Step 4: Point `plotly.py` at the shared module**
 
-In `src/agent_usage/render/plotly.py`, delete the local `rank_usage`, `bucket_top_n`, `_OTHER_LABEL` definitions. Add near the other imports:
+In `src/tomax/render/plotly.py`, delete the local `rank_usage`, `bucket_top_n`, `_OTHER_LABEL` definitions. Add near the other imports:
 
 ```python
-from agent_usage.render._counters import OTHER_LABEL as _OTHER_LABEL
-from agent_usage.render._counters import bucket_top_n, rank_usage
+from tomax.render._counters import OTHER_LABEL as _OTHER_LABEL
+from tomax.render._counters import bucket_top_n, rank_usage
 ```
 
 Keep the `_OTHER_LABEL` alias so any existing internal references in `plotly.py` still resolve.
@@ -107,7 +107,7 @@ Expected: PASS (both the new counter tests and the existing plotly tests)
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/agent_usage/render/_counters.py src/agent_usage/render/plotly.py tests/render/test_counters.py
+git add src/tomax/render/_counters.py src/tomax/render/plotly.py tests/render/test_counters.py
 git commit -m "refactor: extract shared usage-counter helpers from plotly"
 ```
 
@@ -118,11 +118,11 @@ git commit -m "refactor: extract shared usage-counter helpers from plotly"
 A pure function that turns validated daily payloads into the `data.json` dict. Reuses existing aggregate helpers (`rolling_window`, `daily_token_totals`, `daily_totals`, `aggregate_records`) and the Task 1 counter helpers.
 
 **Files:**
-- Create: `src/agent_usage/render/dashboard_data.py`
+- Create: `src/tomax/render/dashboard_data.py`
 - Test: `tests/render/test_dashboard_data.py`
 
 **Interfaces:**
-- Consumes: `agent_usage.aggregate.{rolling_window, daily_token_totals, daily_totals, aggregate_records}`; `agent_usage.render._counters.{rank_usage, bucket_top_n}`; `agent_usage.models.SupportedAgent`.
+- Consumes: `tomax.aggregate.{rolling_window, daily_token_totals, daily_totals, aggregate_records}`; `tomax.render._counters.{rank_usage, bucket_top_n}`; `tomax.models.SupportedAgent`.
 - Produces: `build_dashboard_data(valid_payloads: list[dict], *, today: datetime.date, window_days: int = 14, pie_top_n: int = 6) -> dict`.
 
 Semantics:
@@ -139,7 +139,7 @@ Semantics:
 # tests/render/test_dashboard_data.py
 from datetime import date
 
-from agent_usage.render.dashboard_data import build_dashboard_data
+from tomax.render.dashboard_data import build_dashboard_data
 
 _STATUS = "available_with_activity"
 
@@ -220,12 +220,12 @@ def test_build_dashboard_data_empty_uses_window_fallback():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/render/test_dashboard_data.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agent_usage.render.dashboard_data'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tomax.render.dashboard_data'`
 
 - [ ] **Step 3: Implement the builder**
 
 ```python
-# src/agent_usage/render/dashboard_data.py
+# src/tomax/render/dashboard_data.py
 """Build the chart-ready ``data.json`` payload consumed by the interactive dashboard UI.
 
 Pure and I/O-free: takes already-validated daily payloads (the same
@@ -237,14 +237,14 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from agent_usage.aggregate import (
+from tomax.aggregate import (
     aggregate_records,
     daily_token_totals,
     daily_totals,
     rolling_window,
 )
-from agent_usage.models import SupportedAgent
-from agent_usage.render._counters import bucket_top_n, rank_usage
+from tomax.models import SupportedAgent
+from tomax.render._counters import bucket_top_n, rank_usage
 
 
 def _pie(counters: dict[str, int], pie_top_n: int) -> list[dict]:
@@ -311,7 +311,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/render/dashboard_data.py tests/render/test_dashboard_data.py
+git add src/tomax/render/dashboard_data.py tests/render/test_dashboard_data.py
 git commit -m "feat: add interactive dashboard data.json builder"
 ```
 
@@ -322,14 +322,14 @@ git commit -m "feat: add interactive dashboard data.json builder"
 Add a shallow-clone helper to the existing git module and a small fetch function that clones the profile repo into a temp dir, reads `data/v1/devices/**`, and returns `(device_id, payload)` entries ready for `validate_and_partition`.
 
 **Files:**
-- Modify: `src/agent_usage/publish/git.py` (add `shallow_clone`)
-- Create: `src/agent_usage/dashboard/__init__.py` (empty)
-- Create: `src/agent_usage/dashboard/remote.py`
+- Modify: `src/tomax/publish/git.py` (add `shallow_clone`)
+- Create: `src/tomax/dashboard/__init__.py` (empty)
+- Create: `src/tomax/dashboard/remote.py`
 - Test: `tests/dashboard/test_remote.py`
 - Create: `tests/dashboard/__init__.py` (empty, if the suite uses package dirs — mirror `tests/render/`)
 
 **Interfaces:**
-- Consumes: `agent_usage.publish.git._run` (module-internal), `GitCommandError`.
+- Consumes: `tomax.publish.git._run` (module-internal), `GitCommandError`.
 - Produces: `shallow_clone(repo_url: str, dest: Path, *, branch: str = "main") -> Path`; `fetch_device_entries(repo_target: str, *, branch: str = "main") -> list[tuple[str, dict]]` and exception `NoRepoTargetError`.
 
 - [ ] **Step 1: Write the failing test**
@@ -341,7 +341,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_usage.dashboard import remote
+from tomax.dashboard import remote
 
 
 def test_fetch_device_entries_reads_cloned_device_payloads(monkeypatch, tmp_path):
@@ -368,11 +368,11 @@ def test_fetch_device_entries_requires_repo_target():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/dashboard/test_remote.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agent_usage.dashboard'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tomax.dashboard'`
 
 - [ ] **Step 3: Add `shallow_clone` to `git.py`**
 
-Append to `src/agent_usage/publish/git.py` (after `clone_or_open`):
+Append to `src/tomax/publish/git.py` (after `clone_or_open`):
 
 ```python
 def shallow_clone(repo_url: str, dest: Path, *, branch: str = "main") -> Path:
@@ -395,10 +395,10 @@ def shallow_clone(repo_url: str, dest: Path, *, branch: str = "main") -> Path:
 - [ ] **Step 4: Implement the remote fetch module**
 
 ```python
-# src/agent_usage/dashboard/remote.py
+# src/tomax/dashboard/remote.py
 """Fetch multi-device published records by shallow-cloning the profile repo.
 
-Used by ``agent-usage dashboard --all-devices``. Clones the configured
+Used by ``tomax dashboard --all-devices``. Clones the configured
 profile repository into a temporary directory, reads every device's public
 daily records under ``data/v1/devices/**``, and returns them as
 ``(device_id, payload)`` entries for ``validate_and_partition``. The clone is
@@ -411,7 +411,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from agent_usage.publish.git import shallow_clone
+from tomax.publish.git import shallow_clone
 
 _DEVICES_SUBPATH = Path("data") / "v1" / "devices"
 
@@ -440,10 +440,10 @@ def fetch_device_entries(
     """Shallow-clone the profile repo and return every device's daily records."""
     if not repo_target:
         raise NoRepoTargetError(
-            "no repo target set — run `agent-usage init --repo OWNER/REPO` first"
+            "no repo target set — run `tomax init --repo OWNER/REPO` first"
         )
     repo_url = f"https://github.com/{repo_target}.git"
-    with tempfile.TemporaryDirectory(prefix="agent-usage-dash-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tomax-dash-") as tmp:
         clone_dir = Path(tmp) / "profile-repo"
         shallow_clone(repo_url, clone_dir, branch=branch)
         return _read_entries(clone_dir / _DEVICES_SUBPATH)
@@ -459,8 +459,8 @@ Expected: PASS
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/agent_usage/dashboard/__init__.py src/agent_usage/dashboard/remote.py \
-        src/agent_usage/publish/git.py tests/dashboard/__init__.py tests/dashboard/test_remote.py
+git add src/tomax/dashboard/__init__.py src/tomax/dashboard/remote.py \
+        src/tomax/publish/git.py tests/dashboard/__init__.py tests/dashboard/test_remote.py
 git commit -m "feat: fetch multi-device records via shallow clone for dashboard"
 ```
 
@@ -471,11 +471,11 @@ git commit -m "feat: fetch multi-device records via shallow clone for dashboard"
 A single entry point that produces the final `data.json` dict for either source, wiring the ledger/staging path (local) or the remote fetch (all-devices) into `validate_and_partition` + `build_dashboard_data`.
 
 **Files:**
-- Create: `src/agent_usage/dashboard/payload.py`
+- Create: `src/tomax/dashboard/payload.py`
 - Test: `tests/dashboard/test_payload.py`
 
 **Interfaces:**
-- Consumes: `agent_usage.ledger.repository.LedgerRepository`; `agent_usage.public_data.stage_daily_records`; `agent_usage.aggregate.validate_and_partition`; `agent_usage.render.dashboard_data.build_dashboard_data`; `agent_usage.dashboard.remote.fetch_device_entries`; `agent_usage.privacy.PrivacyPolicy`.
+- Consumes: `tomax.ledger.repository.LedgerRepository`; `tomax.public_data.stage_daily_records`; `tomax.aggregate.validate_and_partition`; `tomax.render.dashboard_data.build_dashboard_data`; `tomax.dashboard.remote.fetch_device_entries`; `tomax.privacy.PrivacyPolicy`.
 - Produces: `build_payload(*, ledger_path: Path, all_devices: bool, repo_target: str | None, privacy_policy: PrivacyPolicy, today: date, pie_top_n: int, tmp_stage_dir: Path) -> dict`.
 
 Semantics:
@@ -489,7 +489,7 @@ Semantics:
 # tests/dashboard/test_payload.py
 from datetime import date
 
-from agent_usage.dashboard import payload as payload_module
+from tomax.dashboard import payload as payload_module
 
 
 def test_build_payload_remote_uses_fetched_entries(monkeypatch, tmp_path):
@@ -542,12 +542,12 @@ def test_build_payload_remote_uses_fetched_entries(monkeypatch, tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/dashboard/test_payload.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agent_usage.dashboard.payload'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tomax.dashboard.payload'`
 
 - [ ] **Step 3: Implement payload assembly**
 
 ```python
-# src/agent_usage/dashboard/payload.py
+# src/tomax/dashboard/payload.py
 """Assemble the dashboard data.json from either local ledger data or multi-device data."""
 
 from __future__ import annotations
@@ -555,12 +555,12 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
-from agent_usage.aggregate import validate_and_partition
-from agent_usage.dashboard.remote import fetch_device_entries
-from agent_usage.ledger.repository import LedgerRepository
-from agent_usage.privacy import PrivacyPolicy
-from agent_usage.public_data import stage_daily_records
-from agent_usage.render.dashboard_data import build_dashboard_data
+from tomax.aggregate import validate_and_partition
+from tomax.dashboard.remote import fetch_device_entries
+from tomax.ledger.repository import LedgerRepository
+from tomax.privacy import PrivacyPolicy
+from tomax.public_data import stage_daily_records
+from tomax.render.dashboard_data import build_dashboard_data
 
 
 def _local_entries(
@@ -610,7 +610,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/dashboard/payload.py tests/dashboard/test_payload.py
+git add src/tomax/dashboard/payload.py tests/dashboard/test_payload.py
 git commit -m "feat: assemble dashboard payload from local or multi-device data"
 ```
 
@@ -621,7 +621,7 @@ git commit -m "feat: assemble dashboard payload from local or multi-device data"
 A stdlib server that serves a UI `dist/` directory (produced on demand by Task 6) and injects `/data.json` from the in-memory payload. Binds `127.0.0.1`.
 
 **Files:**
-- Create: `src/agent_usage/dashboard/server.py`
+- Create: `src/tomax/dashboard/server.py`
 - Test: `tests/dashboard/test_server.py`
 
 **Interfaces:**
@@ -639,7 +639,7 @@ import urllib.request
 from pathlib import Path
 from threading import Thread
 
-from agent_usage.dashboard.server import make_server
+from tomax.dashboard.server import make_server
 
 
 def _get(url: str) -> tuple[int, bytes, str]:
@@ -687,12 +687,12 @@ def test_server_binds_loopback_only(tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/dashboard/test_server.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agent_usage.dashboard.server'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tomax.dashboard.server'`
 
 - [ ] **Step 3: Implement the server**
 
 ```python
-# src/agent_usage/dashboard/server.py
+# src/tomax/dashboard/server.py
 """Serve the interactive dashboard on localhost: committed dist/ plus injected data.json."""
 
 from __future__ import annotations
@@ -753,7 +753,7 @@ def serve(
     server = make_server(data, dist_dir=dist_dir, host=host, port=port)
     actual_port = server.server_address[1]
     url = f"http://{host}:{actual_port}"
-    print(f"agent-usage: dashboard serving at {url} (Ctrl-C to stop)")
+    print(f"tomax: dashboard serving at {url} (Ctrl-C to stop)")
     if open_browser:
         webbrowser.open(url)
     try:
@@ -773,7 +773,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/dashboard/server.py tests/dashboard/test_server.py
+git add src/tomax/dashboard/server.py tests/dashboard/test_server.py
 git commit -m "feat: add localhost dashboard http server"
 ```
 
@@ -784,7 +784,7 @@ git commit -m "feat: add localhost dashboard http server"
 Build the React UI when the command runs, caching the result and rebuilding only when the UI source is newer than the last build. Returns the servable `dist/` directory. All subprocess calls go through an injectable `run` so the logic is unit-testable without Node.
 
 **Files:**
-- Create: `src/agent_usage/dashboard/ui_build.py`
+- Create: `src/tomax/dashboard/ui_build.py`
 - Test: `tests/dashboard/test_ui_build.py`
 
 **Interfaces:**
@@ -803,7 +803,7 @@ from pathlib import Path
 
 import pytest
 
-from agent_usage.dashboard import ui_build
+from tomax.dashboard import ui_build
 
 
 def test_ensure_build_skips_when_fresh(tmp_path):
@@ -868,10 +868,10 @@ Expected: FAIL with `ImportError: cannot import name 'ui_build'` (module missing
 - [ ] **Step 3: Implement the build orchestrator**
 
 ```python
-# src/agent_usage/dashboard/ui_build.py
+# src/tomax/dashboard/ui_build.py
 """Build the React dashboard UI on demand and return the servable dist directory.
 
-Called each time ``agent-usage dashboard`` runs. The build is cached: if
+Called each time ``tomax dashboard`` runs. The build is cached: if
 ``dist/index.html`` is newer than every UI source file, it is reused as-is.
 Otherwise the UI is rebuilt with pnpm (or npm). No build artifact is ever
 committed — ``dist/`` is a local, gitignored cache.
@@ -947,7 +947,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/agent_usage/dashboard/ui_build.py tests/dashboard/test_ui_build.py
+git add src/tomax/dashboard/ui_build.py tests/dashboard/test_ui_build.py
 git commit -m "feat: build dashboard UI on demand with caching"
 ```
 
@@ -958,12 +958,12 @@ git commit -m "feat: build dashboard UI on demand with caching"
 Add the `dashboard` Typer command: resolve config, build the payload, build the UI on demand (Task 6), and serve.
 
 **Files:**
-- Create: `src/agent_usage/commands/dashboard.py`
-- Modify: `src/agent_usage/cli.py` (import + `@app.command()` def)
+- Create: `src/tomax/commands/dashboard.py`
+- Modify: `src/tomax/cli.py` (import + `@app.command()` def)
 - Test: `tests/commands/test_dashboard_cli.py` (mirror existing `tests/commands/` layout; add `tests/commands/__init__.py` only if that dir uses one)
 
 **Interfaces:**
-- Consumes: `agent_usage.dashboard.payload.build_payload`; `agent_usage.dashboard.ui_build.{ensure_build, UIBuildError}`; `agent_usage.dashboard.server.serve`; `agent_usage.dashboard.remote.NoRepoTargetError`; `agent_usage.config.{load_config, config_file_path, ledger_file_path}`; `agent_usage.privacy.PrivacyPolicy`.
+- Consumes: `tomax.dashboard.payload.build_payload`; `tomax.dashboard.ui_build.{ensure_build, UIBuildError}`; `tomax.dashboard.server.serve`; `tomax.dashboard.remote.NoRepoTargetError`; `tomax.config.{load_config, config_file_path, ledger_file_path}`; `tomax.privacy.PrivacyPolicy`.
 - Produces: `commands/dashboard.py::run(*, ledger_path, config_path, all_devices, port, open_browser, pie_top_n, ui_dir, force_build, today, tmp_stage_dir) -> None`; a `UI_DIR` module constant resolving the repo's `dashboard-ui/` source directory.
 
 - [ ] **Step 1: Write the failing test**
@@ -974,8 +974,8 @@ from datetime import date
 
 import pytest
 
-from agent_usage.commands import dashboard as dashboard_command
-from agent_usage.dashboard.remote import NoRepoTargetError
+from tomax.commands import dashboard as dashboard_command
+from tomax.dashboard.remote import NoRepoTargetError
 
 
 def test_run_builds_payload_and_serves(monkeypatch, tmp_path):
@@ -1041,28 +1041,28 @@ def test_run_reports_missing_repo_target(monkeypatch, tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest tests/commands/test_dashboard_cli.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'agent_usage.commands.dashboard'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'tomax.commands.dashboard'`
 
 - [ ] **Step 3: Implement the command module**
 
 ```python
-# src/agent_usage/commands/dashboard.py
-"""`agent-usage dashboard`: build the payload and serve the interactive localhost dashboard."""
+# src/tomax/commands/dashboard.py
+"""`tomax dashboard`: build the payload and serve the interactive localhost dashboard."""
 
 from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
 
-from agent_usage.config import load_config
-from agent_usage.dashboard.payload import build_payload
-from agent_usage.dashboard.remote import NoRepoTargetError
-from agent_usage.dashboard.server import serve
-from agent_usage.dashboard.ui_build import UIBuildError, ensure_build
-from agent_usage.privacy import PrivacyPolicy
+from tomax.config import load_config
+from tomax.dashboard.payload import build_payload
+from tomax.dashboard.remote import NoRepoTargetError
+from tomax.dashboard.server import serve
+from tomax.dashboard.ui_build import UIBuildError, ensure_build
+from tomax.privacy import PrivacyPolicy
 
 # The React UI source lives at the repo root under dashboard-ui/.
-# commands/dashboard.py -> commands -> agent_usage -> src -> <repo root>.
+# commands/dashboard.py -> commands -> tomax -> src -> <repo root>.
 UI_DIR = Path(__file__).resolve().parents[3] / "dashboard-ui"
 
 
@@ -1117,10 +1117,10 @@ Expected: PASS
 
 - [ ] **Step 5: Wire the command into `cli.py`**
 
-Add to the imports block in `src/agent_usage/cli.py`:
+Add to the imports block in `src/tomax/cli.py`:
 
 ```python
-from agent_usage.commands import dashboard as dashboard_command
+from tomax.commands import dashboard as dashboard_command
 ```
 
 Add this command (after the `render` command), using a temp stage dir so the local path never writes into the user's tree:
@@ -1144,7 +1144,7 @@ def dashboard(
     if pie_top_n < 1:
         raise typer.BadParameter("--pie-top-n must be at least 1")
     now = datetime.now(timezone.utc)
-    with tempfile.TemporaryDirectory(prefix="agent-usage-dash-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="tomax-dash-") as tmp:
         try:
             dashboard_command.run(
                 ledger_path=ledger_file_path(),
@@ -1159,7 +1159,7 @@ def dashboard(
                 tmp_stage_dir=Path(tmp),
             )
         except dashboard_command.DashboardError as error:
-            typer.echo(f"agent-usage: {error}")
+            typer.echo(f"tomax: {error}")
             raise typer.Exit(code=1) from error
 ```
 
@@ -1173,8 +1173,8 @@ Expected: PASS (all tests, no regressions)
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/agent_usage/commands/dashboard.py src/agent_usage/cli.py tests/commands/test_dashboard_cli.py
-git commit -m "feat: add agent-usage dashboard command"
+git add src/tomax/commands/dashboard.py src/tomax/cli.py tests/commands/test_dashboard_cli.py
+git commit -m "feat: add tomax dashboard command"
 ```
 
 ---
@@ -1183,7 +1183,7 @@ git commit -m "feat: add agent-usage dashboard command"
 
 Scaffold the Vite + React + bklit app under `dashboard-ui/` and implement the five chart blocks against the `data.json` contract in the required dark theme. Do **not** build or commit a `dist/` — Task 6's `ensure_build` compiles it on demand when the command runs, and `dashboard-ui/dist/` stays gitignored.
 
-This task is not Python-TDD; verification is manual (`agent-usage dashboard` builds the UI and renders). Do not run a Node build in CI.
+This task is not Python-TDD; verification is manual (`tomax dashboard` builds the UI and renders). Do not run a Node build in CI.
 
 **Files:**
 - Create: `dashboard-ui/` (Vite React scaffold: `package.json`, `vite.config.ts`, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/theme.css`, chart components under `src/charts/`)
@@ -1337,8 +1337,8 @@ This confirms the source compiles. The CLI (Task 6's `ensure_build`) runs these 
 
 ```bash
 rm -rf dashboard-ui/dist          # prove the CLI builds from scratch
-uv run agent-usage collect        # ensure some local data exists
-uv run agent-usage dashboard --no-open --port 8000
+uv run tomax collect        # ensure some local data exists
+uv run tomax dashboard --no-open --port 8000
 # The command should build the UI (pnpm install/build) then start serving.
 # In another shell:
 curl -s http://127.0.0.1:8000/data.json | head -c 200
@@ -1350,7 +1350,7 @@ curl -s http://127.0.0.1:8000/data.json | head -c 200
 Then verify multi-device:
 
 ```bash
-uv run agent-usage dashboard --all-devices --no-open
+uv run tomax dashboard --all-devices --no-open
 ```
 
 - [ ] **Step 8: Commit**

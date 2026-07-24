@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from agent_usage.time_window import DEFAULT_INITIAL_START, EPOCH_START, TimeWindow, normalize_utc
+from tomax.time_window import DEFAULT_INITIAL_START, EPOCH_START, TimeWindow, normalize_utc
 
 
 UTC = timezone.utc

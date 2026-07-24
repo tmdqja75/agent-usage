@@ -88,8 +88,8 @@ Render only static Markdown and relative SVG assets. Include:
 Use stable managed markers:
 
 ```html
-<!-- agent-usage:start -->
-<!-- agent-usage:end -->
+<!-- tomax:start -->
+<!-- tomax:end -->
 ```
 
 Preserve all README text outside those markers.

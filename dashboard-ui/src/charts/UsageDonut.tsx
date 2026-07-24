@@ -15,7 +15,7 @@ import { t } from "@/i18n";
 
 export type UsageDatum = { name: string; count: number };
 
-// Matches OTHER_LABEL in src/agent_usage/render/_counters.py — a
+// Matches OTHER_LABEL in src/tomax/render/_counters.py — a
 // server-synthesized bucket, not a real skill/MCP name, so it's translated.
 const OTHER_LABEL = "Other";
 

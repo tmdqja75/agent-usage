@@ -2,7 +2,7 @@
 
 ## Read source health before interpreting totals
 
-`agent-usage doctor` and `agent-usage collect` report source health separately from token totals:
+`tomax doctor` and `tomax collect` report source health separately from token totals:
 
 - `available_with_activity` means the source was readable and produced activity.
 - `available_with_zero_activity` means the source was readable for the requested window and produced no activity.
@@ -22,11 +22,11 @@ Codex rollout `token_count` events are cumulative snapshots. The collector conve
 
 ## Publishing
 
-`agent-usage publish` requires a configured profile repository and a working GitHub CLI login. Start with:
+`tomax publish` requires a configured profile repository and a working GitHub CLI login. Start with:
 
 ```sh
 gh auth status
-agent-usage init --repo OWNER/PROFILE-REPO
+tomax init --repo OWNER/PROFILE-REPO
 ```
 
 Publishing is limited to this device's sanitized partition. It fetches and rebases before push, retries a non-fast-forward race a bounded number of times, and never force-pushes. If a push fails, resolve the reported Git/GitHub problem and rerun publish; do not manually stage another device's partition.
@@ -36,9 +36,9 @@ Publishing is limited to this device's sanitized partition. It fetches and rebas
 Scheduling is opt-in and macOS-only:
 
 ```sh
-agent-usage schedule install --daily-at 09:00
-agent-usage schedule status
-agent-usage schedule remove
+tomax schedule install --daily-at 09:00
+tomax schedule status
+tomax schedule remove
 ```
 
 The scheduled `launchd` job runs `collect` and only then `publish`; it writes local scheduler logs. If installation or removal fails, the command preserves the prior configuration state rather than claiming success. Do not configure the scheduler until you are ready for the local machine to publish its own sanitized daily aggregates.

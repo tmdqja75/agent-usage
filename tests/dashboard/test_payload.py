@@ -1,6 +1,6 @@
 from datetime import date
 
-from agent_usage.dashboard import payload as payload_module
+from tomax.dashboard import payload as payload_module
 
 
 def test_build_payload_remote_uses_fetched_entries(monkeypatch, tmp_path):
